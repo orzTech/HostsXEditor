@@ -207,9 +207,13 @@ Gui, +Resize  ; Make the window resizable.
 Gui, Margin, 0, 0
 Gui Font, %Style% c%Color%, %Font%
 Gui, Add, Edit, vMainEdit WantTab WantReturn WantCtrlA HSCROLL -Wrap W800 R30
+
 Gui, Show,, HostsX
 Gui +LastFound
 hGui := WinExist()
+WinGet ControlID, ID
+ControlGet, EditHandle, HWND,, Edit1, ahk_id %ControlID%
+DllCall("SendMessage", UInt, EditHandle, UInt, 0x00CB, UInt, 1, "UInt *", 100)
 CurrentFileName =  ; Indicate that there is no current file.
 Unchanged=
 _checkWhitelistAfterOpen = %CheckWhitelistAfterOpen%
@@ -258,7 +262,10 @@ Loop, %0%  ; For each parameter:
 }
 
 If CheckWhitelistAfterOpen = orzYes
+{
+	CheckWhitelistInappMode=true
 	Gosub CheckWhitelist
+}
 return
 
 #IfWinActive HostsX ahk_class AutoHotkeyGUI
@@ -282,7 +289,7 @@ if SelectedFileName =  ; No file selected.
 Gosub FileRead
 return
 
-FileRead:  ; Caller has set the variable SelectedFileName for us.
+FileRead:
 FileRead, MainEdit, %SelectedFileName%  ; Read the file's contents into the variable.
 if ErrorLevel
 {
@@ -296,7 +303,10 @@ Unchanged=%MainEdit%
 CurrentFileName = %SelectedFileName%
 Gui, Show,, HostsX - %CurrentFileName%   ; Show file name in title bar.
 If CheckWhitelistAfterOpen = orzYes
+{
+	CheckWhitelistInappMode=true
 	Gosub CheckWhitelist
+}
 return
 
 ^S::
@@ -1493,18 +1503,23 @@ Return
 
 F10::
 CheckWhitelist:
+Gui +Disabled
+Tooltip, 除错中...
 Loop, %ArrayWhitelistCount%
 {
 	wTitle := ArrayWhiteListTitle%A_Index%
 	wFind := ArrayWhiteListFind%A_Index%
 	wReplace := ArrayWhiteListReplace%A_Index%
-	wResult := CheckWhiteListItem(wTitle, wFind, wReplace, CheckWhitelistSilentMode)
+	wResult := CheckWhiteListItem(wTitle, wFind, wReplace, CheckWhitelistSilentMode,CheckWhitelistInappMode)
 	if wResult = exit
 	{
+		Tooltip
+		Gui -Disabled
 		return
 	}
 }
-If CheckWhitelistInappMode = true
+wResult=
+If CheckWhitelistInappMode=true
 {
 	CheckWhitelistInappMode = false
 }
@@ -1512,9 +1527,11 @@ Else
 {
 	TrayTip, HostsX 提示, 成功执行除错工作！, 30, 1
 }
+Tooltip
+Gui -Disabled
 Return
 
-CheckWhiteListItem(wTitle, wFind, wReplace, CheckWhitelistSilentMode)
+CheckWhiteListItem(wTitle, wFind, wReplace, CheckWhitelistSilentMode,CheckWhitelistInappMode)
 {
 	wFoundItem=
 	Loop, parse, wFind, `n, `r
@@ -1564,15 +1581,32 @@ CheckWhiteListItem(wTitle, wFind, wReplace, CheckWhitelistSilentMode)
 		}
 		Else
 		{
-			if wDefaultCancel = true
-				Msgbox 291,, %wPrompt%
-			Else
-				Msgbox 35,, %wPrompt%
 			
-			ifMsgBox Cancel
-				wPromptResult = Cancel
-			Else ifmsgbox yes
-				wPromptResult = Yes
+			if wDefaultCancel = true
+			{
+				if CheckWhitelistInappMode=true
+					wPromptResult = No
+				Else
+				{
+					Gui -Disabled +OwnDialogs
+					Msgbox 291,, %wPrompt%
+					Gui +Disabled
+					ifMsgBox Cancel
+						wPromptResult = Cancel
+					Else ifmsgbox yes
+						wPromptResult = Yes
+				}
+			}
+			Else
+			{
+				Gui -Disabled +OwnDialogs
+				Msgbox 35,, %wPrompt%
+				Gui +Disabled
+				ifMsgBox Cancel
+					wPromptResult = Cancel
+				Else ifmsgbox yes
+					wPromptResult = Yes
+			}
 		}
 
 		If wPromptResult = Cancel
