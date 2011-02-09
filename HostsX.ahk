@@ -1731,8 +1731,8 @@ TrayTip, HostsX 白名单及除错数据更新中, 正在访问 orzTech.com 更新点列表. . ., 30
 updateList:=UrlDownloadToVar("http://orztech.com/labs/HostsX.lh/autoupdate.txt?type=HostsXWhitelist.orzhosts&ver=" . RegExReplace(applicationversion, " ", "+"))
 If ErrorLevel
 {
-	TrayTip, HostsX 白名单及除错数据更新失败, 无法访问 orzTech.com 更新点列表，请检查网络是否有问题并稍候重试。, 30, 3
-	Return
+	TrayTip, HostsX 白名单及除错数据更新中, 无法访问 orzTech.com 更新点列表，已载入程序内部列表。, 30, 3
+	updateList = http://hostsx.googlecode.com/svn/trunk/
 }
 updateListCount=0
 Loop, parse, updateList, `n, `r  ; Specifying `n prior to `r allows both Windows and Unix files to be parsed.
@@ -1767,8 +1767,8 @@ TrayTip, HostsX 数据更新中, 正在访问 orzTech.com 更新点列表. . ., 30, 1
 updateList:=UrlDownloadToVar("http://orztech.com/labs/HostsX.lh/autoupdate.txt?type=HostsX.orzhosts&ver=" . RegExReplace(applicationversion, " ", "+"))
 If ErrorLevel
 {
-	TrayTip, HostsX 数据更新失败, 无法访问 orzTech.com 更新点列表，请检查网络是否有问题并稍候重试。, 30, 3
-	Return
+	TrayTip, HostsX 数据更新中, 无法访问 orzTech.com 更新点列表，已载入程序内部列表。, 30, 3
+	updateList = http://hostsx.googlecode.com/svn/trunk/
 }
 updateListCount=0
 Loop, parse, updateList, `n, `r  ; Specifying `n prior to `r allows both Windows and Unix files to be parsed.
@@ -1873,8 +1873,8 @@ TrayTip, HostsX 推荐数据列表更新中, 正在访问 orzTech.com 更新点列表. . ., 30, 1
 updateList:=UrlDownloadToVar("http://orztech.com/labs/HostsX.lh/autoupdate.txt?type=HostsX.orzsource&ver=" . RegExReplace(applicationversion, " ", "+"))
 If ErrorLevel
 {
-	TrayTip, HostsX 推荐数据列表更新失败, 无法访问 orzTech.com 更新点列表，请检查网络是否有问题并稍候重试。, 30, 3
-	Return
+	TrayTip, HostsX 推荐数据列表更新中, 无法访问 orzTech.com 更新点列表，已载入程序内部列表。, 30, 3
+	updateList = http://hostsx.googlecode.com/svn/trunk/
 }
 updateListCount=0
 Loop, parse, updateList, `n, `r  ; Specifying `n prior to `r allows both Windows and Unix files to be parsed.
