@@ -1,0 +1,5 @@
+[orzTech/HostsX]
+Font=Fixedsys
+FontStyle=s12
+FontColor=0x000000
+UpdateAtStartup=orzYes
