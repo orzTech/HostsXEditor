@@ -157,7 +157,7 @@ Menu, FormatMenu, Add, 屏蔽转向统一使用 127.1（仅限 Windows Vista 之前版本）(&2)
 
 GoSub BuildInsertMenu
 GoSub BuildBackupMenu
-Menu, ToolsMenu, Add, 检查 Hosts 白名单并除错(&E)`tF10, CheckWhitelist
+Menu, ToolsMenu, Add, 根据 HostsX 白名单除错(&E)`tF10, CheckWhitelist
 Menu, ToolsMenu, Add
 Menu, ToolsMenu, Add, 刷新 DNS 缓存(&D)`tF7, ToolsCleanDNS
 Menu, ToolsMenu, Add, 清除 Internet Explorer 缓存(&I)`tF8, ToolsCleanIE
@@ -178,11 +178,15 @@ Menu, HelpMenu, Add, 囧科技(&O), orzTech
 Menu, HelpMenu, Add, 囧科技技术支持系统(&S), orzTechSupport
 Menu, HelpMenu, Add
 Menu, HelpMenu, Add, 关于 HostsX(&A), HelpAbout
-
-Menu, OptionsMenu, Add, 当数据文件不存在时自动更新(&A), OptionsUpdateAtStartup
-If (UpdateAtStartup = "orzYes")
-	Menu, OptionsMenu, Check, 当数据文件不存在时自动更新(&A)
 	
+Menu, OptionsMenu, Add, 根据 HostsX 白名单除错时使用静默模式(&S), OptionsCheckWhitelistSilentMode
+If (CheckWhitelistSilentMode = "orzYes")
+	Menu, OptionsMenu, Check, 根据 HostsX 白名单除错时使用静默模式(&S)
+
+Menu, OptionsMenu, Add, 打开文件后自动根据 HostsX 白名单除错(&O), OptionsCheckWhitelistAfterOpen
+If (CheckWhitelistAfterOpen = "orzYes")
+	Menu, OptionsMenu, Check, 打开文件后自动根据 HostsX 白名单除错(&O)
+
 ; Create the menu bar by attaching the sub-menus to it:
 Menu, MyMenuBar, Add, 文件(&F), :FileMenu
 Menu, MyMenuBar, Add, 编辑(&E), :EditMenu
@@ -208,6 +212,8 @@ Gui +LastFound
 hGui := WinExist()
 CurrentFileName =  ; Indicate that there is no current file.
 Unchanged=
+_checkWhitelistAfterOpen = %CheckWhitelistAfterOpen%
+CheckWhitelistAfterOpen = orzNo
 IfExist,%SystemHosts%
 {
 	SelectedFileName =%SystemHosts%
@@ -224,16 +230,23 @@ Else
 		Gosub FileRead
 	}
 }
+CheckWhitelistAfterOpen = %_checkWhitelistAfterOpen%
 
-If (UpdateAtStartup = "orzYes")
+NeedUpdate = false
+if (UpdateWhenMissing = "orzYes")
 {
 	IfNotExist,%ConfigPath%\HostsX.orzhosts
-		GoSub UpdateHostsFile
+		NeedUpdate = true
 	IfNotExist,%ConfigPath%\HostsX.orzsource
-		GoSub UpdateOtherHosts
+		NeedUpdate = true
 	IfNotExist,%ConfigPath%\HostsXWhitelist.orzhosts
-		GoSub UpdateWhitelist
+		NeedUpdate = true
 }
+If (UpdateAtStartup = "orzYes")
+	NeedUpdate = true
+
+If NeedUpdate = true
+	Gosub UpdateAll
 Gosub ParseWhitelist
 
 Loop, %0%  ; For each parameter:
@@ -243,6 +256,9 @@ Loop, %0%  ; For each parameter:
     if param=auto
     	Gosub AutoParam
 }
+
+If CheckWhitelistAfterOpen = orzYes
+	Gosub CheckWhitelist
 return
 
 #IfWinActive HostsX ahk_class AutoHotkeyGUI
@@ -279,6 +295,8 @@ GuiControlGet, MainEdit
 Unchanged=%MainEdit%
 CurrentFileName = %SelectedFileName%
 Gui, Show,, HostsX - %CurrentFileName%   ; Show file name in title bar.
+If CheckWhitelistAfterOpen = orzYes
+	Gosub CheckWhitelist
 return
 
 ^S::
@@ -890,6 +908,13 @@ Menu, UpdateMenu, Add,
 Menu, UpdateMenu, DeleteAll
 Menu, UpdateMenu, Add, 一键更新 αlpha(&O), OneKeyUpdate
 Menu, UpdateMenu, Add
+Menu, UpdateMenu, Add, 启动程序时自动更新数据文件(&S), OptionsUpdateAtStartup
+If (UpdateAtStartup = "orzYes")
+	Menu, UpdateMenu, Check, 启动程序时自动更新数据文件(&S)
+Menu, UpdateMenu, Add, 数据文件不存在时自动更新数据文件(&M), OptionsUpdateWhenMissing
+If (UpdateWhenMissing = "orzYes")
+	Menu, UpdateMenu, Check, 数据文件不存在时自动更新数据文件(&M)
+Menu, UpdateMenu, Add
 Menu, UpdateMenu, Add, 更新以下所有数据(&A), UpdateAll
 Menu, UpdateMenu, Add
 Menu, UpdateMenu, Add, 更新 HostsX 广告屏蔽数据(&U), UpdateHostsFile
@@ -1468,8 +1493,197 @@ Return
 
 F10::
 CheckWhitelist:
-mSGBOX I AM A GOOD BOY
+Loop, %ArrayWhitelistCount%
+{
+	wTitle := ArrayWhiteListTitle%A_Index%
+	wFind := ArrayWhiteListFind%A_Index%
+	wReplace := ArrayWhiteListReplace%A_Index%
+	wResult := CheckWhiteListItem(wTitle, wFind, wReplace, CheckWhitelistSilentMode)
+	if wResult = exit
+	{
+		return
+	}
+}
+If CheckWhitelistInappMode = true
+{
+	CheckWhitelistInappMode = false
+}
+Else
+{
+	TrayTip, HostsX 提示, 成功执行除错工作！, 30, 1
+}
 Return
+
+CheckWhiteListItem(wTitle, wFind, wReplace, CheckWhitelistSilentMode)
+{
+	wFoundItem=
+	Loop, parse, wFind, `n, `r
+	{
+		GuiControlGet, MainEdit
+		If (Asc(A_LoopField) = 0)
+		{ }
+		Else
+		{
+			wRegExp = %A_LoopField%
+			StringReplace wRegExp, wRegExp, ., \., All
+			wRegExp=m)(*ANYCRLF)^([0-9a-f:.]+)([　 	]*)([a-z0-9.	 　]*)(%wRegExp%)[　 	]*([a-z0-9.	 　]*)$
+	    	wFound:=RegExMatch(MainEdit,wRegExp)
+	    	if ErrorLevel
+	    	{}
+	    	else if wFound>0
+	    		wFoundItem=%wFoundItem%%A_LoopField%`n
+	    }
+	}
+	if wFoundItem=
+	{}
+	Else
+	{
+		wFoundItem :=RegExReplace(wFoundItem, "`n$", "")
+		if (substr(wTitle,1,1) = "!")
+		{
+			wTitle := substr(wtitle,2)
+			wDefaultCancel = true
+		}
+		wPrompt = 
+(
+检测到存在问题的 Hosts 项：
+%wFoundItem%
+
+帮助信息：
+%wTitle%
+
+是否对此项进行修复？
+)
+		wPromptResult =
+		if CheckWhitelistSilentMode = orzYes
+		{
+			if wDefaultCancel = true
+				wPromptResult = No
+			Else
+				wPromptResult = Yes
+		}
+		Else
+		{
+			if wDefaultCancel = true
+				Msgbox 291,, %wPrompt%
+			Else
+				Msgbox 35,, %wPrompt%
+			
+			ifMsgBox Cancel
+				wPromptResult = Cancel
+			Else ifmsgbox yes
+				wPromptResult = Yes
+		}
+
+		If wPromptResult = Cancel
+			return "exit"
+		Else If wPromptResult = Yes
+		{
+			w_ActionName=
+			w_ActionParam=
+			Loop, parse, wReplace, `n, `r
+			{
+				w_LoopFCH :=substr(A_LoopField,1,1)
+				if w_LoopFCH = $
+				{
+					if (w_ActionName!="")
+					{
+						if IsFunc("CheckWhitelistAction" . w_ActionName)
+						{
+							CheckWhitelistAction%w_ActionName%(wFind, wFoundItem, w_ActionParam)
+						}
+						w_ActionName=
+						w_ActionParam=
+					}
+					w_ActionName:=substr(A_LoopField,2)
+					w_ActionParam=
+				}
+				else
+				{
+					w_ActionParam=%w_ActionParam%%A_LoopField%`n
+				}
+			}
+			if IsFunc("CheckWhitelistAction" . w_ActionName)
+			{
+				CheckWhitelistAction%w_ActionName%(wFind, wFoundItem, w_ActionParam)
+			}
+		}
+	}
+	return ""
+}
+
+CheckWhitelistActionDelete(wFind, wFoundItem, w_ActionParam)
+{
+	Loop, parse, wFoundItem, `n, `r
+	{
+		GuiControlGet, MainEdit
+		If (Asc(A_LoopField) = 0)
+		{ }
+		Else
+		{
+			wRegExp = %A_LoopField%
+			StringReplace wRegExp, wRegExp, ., \., All
+			wRegExp=m)(*ANYCRLF)^([0-9a-f:.]+)([　 	]*)([a-z0-9.	 　]*)(%wRegExp%)[　 	]*([a-z0-9.	 　]*)$
+	    	wFound:=RegExMatch(MainEdit,wRegExp,wSubpart)
+	    	if ErrorLevel
+	    	{}
+	    	else if wFound>0
+	    	{
+		    	if ((wSubpart3 . wSubpart5)="")
+		    	{
+		    		MainEdit := RegExReplace(MainEdit, wRegExp, "")
+		    	}
+		    	Else
+		    	{
+		    		MainEdit := RegExReplace(MainEdit, wRegExp, wSubPart1 . wSubpart2 . wSubpart3 . " " . wSubpart5)
+		    	}
+		    	GuiControl,, MainEdit, %MainEdit%
+	    	}
+	    }
+	}
+}
+
+CheckWhitelistActionReplace(wFind, wFoundItem, w_ActionParam)
+{
+	wFirstTime = true
+	Loop, parse, wFoundItem, `n, `r
+	{
+		GuiControlGet, MainEdit
+		If (Asc(A_LoopField) = 0)
+		{ }
+		Else
+		{
+			wRegExp = %A_LoopField%
+			StringReplace wRegExp, wRegExp, ., \., All
+			wRegExp=m)(*ANYCRLF)^([0-9a-f:.]+)([　 	]*)([a-z0-9.	 　]*)(%wRegExp%)[　 	]*([a-z0-9.	 　]*)$
+	    	wFound:=RegExMatch(MainEdit,wRegExp,wSubpart)
+	    	if ErrorLevel
+	    	{}
+	    	else if wFound>0
+	    	{
+	    		if wFirstTime = true
+	    		{
+	    			StringReplace wParam, w_ActionParam, `n, %A_Space%, All
+	    			StringReplace wParam, wParam, `r, %A_Space%, All
+	    			MainEdit := RegExReplace(MainEdit, wRegExp, "$1$2$3" . RegExReplace(wParam, " $","") . "$5")
+	    			wFirstTime=false
+	    		}
+	    		else
+	    		{
+			    	if ((wSubpart3 . wSubpart5)="")
+			    	{
+			    		MainEdit := RegExReplace(MainEdit, wRegExp, "")
+			    	}
+			    	Else
+			    	{
+			    		MainEdit := RegExReplace(MainEdit, wRegExp, "$1$2$3 $5")
+			    	}
+		    	}
+		    	GuiControl,, MainEdit, %MainEdit%
+	    	}
+	    }
+	}
+}
 
 UpdateWhitelist:
 TrayTip, HostsX 白名单及除错数据更新中, 正在访问 orzTech.com 更新点列表. . ., 30, 1
@@ -1598,6 +1812,14 @@ Loop, %SourceIndex%
 	}
 }
 GuiControl,, MainEdit, %MainEdit%
+
+CheckWhitelistInappMode = true
+_CheckWhitelistSilentMode = %CheckWhitelistSilentMode%
+CheckWhitelistSilentMode = orzYes
+Gosub CheckWhitelist
+CheckWhitelistInappMode = false
+CheckWhitelistSilentMode = %_CheckWhitelistSilentMode%
+
 Gui -Disabled
 GuiControl, Focus, MainEdit
 Send ^{END}
@@ -1698,7 +1920,7 @@ UrlDownloadToVar(URL, Proxy="", ProxyBypass="") {
 HostsDelComments:
 Gui +Disabled
 GuiControlGet, MainEdit
-MainEdit:=RegExReplace(MainEdit, "im)(*ANYCRLF)^[^0-9a-f:].*$", "")
+MainEdit:=RegExReplace(MainEdit, "im)(*ANYCRLF)^[^0-9a-f.:].*$", "")
 MainEdit:=RegExReplace(MainEdit, "`n+", "`n")
 MainEdit:=RegExReplace(MainEdit, "^`n", "")
 MainEdit:=RegExReplace(MainEdit, "`n$", "")
@@ -1710,7 +1932,7 @@ Return
 HostsSort:
 Gui +Disabled
 GuiControlGet, MainEdit
-MainEdit:=RegExReplace(MainEdit, "im)(*ANYCRLF)^[^0-9a-f:].*$", "")
+MainEdit:=RegExReplace(MainEdit, "im)(*ANYCRLF)^[^0-9a-f.:].*$", "")
 MainEdit:=RegExReplace(MainEdit, "im)(*ANYCRLF)#.*$", "`n")
 MainEdit:=RegExReplace(MainEdit, "im)(*ANYCRLF)\s*$", "`n")
 MainEdit:=RegExReplace(MainEdit, "im)(*ANYCRLF)^\s*", "`n")
@@ -2056,19 +2278,29 @@ ReloadSettings:
 setting=%ConfigPath%\HostsX.orzconfig
 IfNotExist, %setting%
 {
-	FileAppend,
-	(
-[orzTech/HostsX]
-Font=Fixedsys
-FontStyle=s12
-FontColor=0x000000
-UpdateAtStartup=orzYes
-	), %setting%
+	FileAppend,[orzTech/HostsX], %setting%
 }
 IniRead, Font, %setting%, orzTech/HostsX, Font
 IniRead, Style, %setting%, orzTech/HostsX, FontStyle
 IniRead, Color, %setting%, orzTech/HostsX, FontColor
 IniRead, UpdateAtStartup, %setting%, orzTech/HostsX, UpdateAtStartup
+IniRead, UpdateWhenMissing, %setting%, orzTech/HostsX, UpdateWhenMissing
+IniRead, CheckWhitelistSilentMode, %setting%, orzTech/HostsX, CheckWhitelistSilentMode
+IniRead, CheckWhitelistAfterOpen, %setting%, orzTech/HostsX, CheckWhitelistAfterOpen
+If Font=ERROR
+	Font=Fixedsys
+If FontStyle=ERROR
+	FontStyle=s12
+If FontColor=ERROR
+	FontColor=0x000000
+If UpdateAtStartup=ERROR
+	UpdateAtStartup=orzNo
+If UpdateWhenMissing=ERROR
+	UpdateWhenMissing=orzYes
+If CheckWhitelistSilentMode=ERROR
+	CheckWhitelistSilentMode=orzNo
+If CheckWhitelistAfterOpen=ERROR
+	CheckWhitelistAfterOpen=orzYes
 Return
 
 SaveSettings:
@@ -2076,6 +2308,9 @@ IniWrite, %Font%, %setting%, orzTech/HostsX, Font
 IniWrite, %Style%, %setting%, orzTech/HostsX, FontStyle
 IniWrite, %Color%, %setting%, orzTech/HostsX, FontColor
 IniWrite, %UpdateAtStartup%, %setting%, orzTech/HostsX, UpdateAtStartup
+IniWrite, %UpdateWhenMissing%, %setting%, orzTech/HostsX, UpdateWhenMissing
+IniWrite, %CheckWhitelistSilentMode%, %setting%, orzTech/HostsX, CheckWhitelistSilentMode
+IniWrite, %CheckWhitelistAfterOpen%, %setting%, orzTech/HostsX, CheckWhitelistAfterOpen
 Return
 
 InsertContent:
@@ -2632,13 +2867,53 @@ Return
 OptionsUpdateAtStartup:
 If (UpdateAtStartup = "orzYes")
 {
-	UpdateAtStartup = "orzNo"
-	Menu, OptionsMenu, Uncheck, 当数据文件不存在时自动更新(&A)
+	UpdateAtStartup = orzNo
+	Menu, UpdateMenu, Uncheck, 启动程序时自动更新数据文件(&S)
 }
 Else
 {
-	UpdateAtStartup = "orzYes"
-	Menu, OptionsMenu, Check, 当数据文件不存在时自动更新(&A)
+	UpdateAtStartup = orzYes
+	Menu, UpdateMenu, Check, 启动程序时自动更新数据文件(&S)
+}
+Return
+
+OptionsUpdateWhenMissing:
+If (UpdateWhenMissing = "orzYes")
+{
+	UpdateWhenMissing = orzNo
+	Menu, UpdateMenu, Uncheck, 数据文件不存在时自动更新数据文件(&M)
+}
+Else
+{
+	UpdateWhenMissing = orzYes
+	Menu, UpdateMenu, Check, 数据文件不存在时自动更新数据文件(&M)
+}
+Return
+
+
+OptionsCheckWhitelistSilentMode:
+If (CheckWhitelistSilentMode = "orzYes")
+{
+	CheckWhitelistSilentMode = orzNo
+	Menu, OptionsMenu, Uncheck, 根据 HostsX 白名单除错时使用静默模式(&S)
+}
+Else
+{
+	CheckWhitelistSilentMode = orzYes
+	Menu, OptionsMenu, Check, 根据 HostsX 白名单除错时使用静默模式(&S)
+}
+Return
+
+OptionsCheckWhitelistAfterOpen:
+If (CheckWhitelistAfterOpen = "orzYes")
+{
+	CheckWhitelistAfterOpen = orzNo
+	Menu, OptionsMenu, Uncheck, 打开文件后自动根据 HostsX 白名单除错(&O)
+}
+Else
+{
+	CheckWhitelistAfterOpen = orzYes
+	Menu, OptionsMenu, Check, 打开文件后自动根据 HostsX 白名单除错(&O)
 }
 Return
 
