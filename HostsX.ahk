@@ -111,7 +111,9 @@ applicationversion=0.4.0.1024 dev
 
 Gosub ReloadSettings
 
-Menu, Tray, NoStandard
+BuildMenu:
+;#debug
+;Menu, Tray, NoStandard
 Menu, Tray, Add, 关于 HostsX(&A), HelpAbout
 Menu, Tray, Add
 Menu, Tray, Add, 退出 HostsX(&X), FileExit
@@ -155,6 +157,8 @@ Menu, FormatMenu, Add, 屏蔽转向统一使用 127.1（仅限 Windows Vista 之前版本）(&2)
 
 GoSub BuildInsertMenu
 GoSub BuildBackupMenu
+Menu, ToolsMenu, Add, 检查 Hosts 白名单并除错(&E)`tF10, CheckWhitelist
+Menu, ToolsMenu, Add
 Menu, ToolsMenu, Add, 刷新 DNS 缓存(&D)`tF7, ToolsCleanDNS
 Menu, ToolsMenu, Add, 清除 Internet Explorer 缓存(&I)`tF8, ToolsCleanIE
 Menu, ToolsMenu, Add, 清除 Windows Media Player 残余广告(&W), ToolsCleanWMP
@@ -163,7 +167,7 @@ Menu, ToolsMenu, Add, 给 Hosts 文件加锁(&L)`tF5, ToolsLockHosts
 Menu, ToolsMenu, Add, 给 Hosts 文件解锁(&U)`tF6, ToolsUnlockHosts
 Menu, ToolsMenu, Add
 Menu, ToolsMenu, Add, 执行 Ping 操作(&P), ToolsPing
-Menu, ToolsMenu, Add, 执行 NSLookup 操作(&P), ToolsNSLookup
+Menu, ToolsMenu, Add, 执行 NSLookup 操作(&N), ToolsNSLookup
 Gosub BuildUpdateMenu
 
 Menu, HelpMenu, Add, HostsX 帮助(&H), orzTechHelpPage
@@ -227,7 +231,11 @@ If (UpdateAtStartup = "orzYes")
 		GoSub UpdateHostsFile
 	IfNotExist,%ConfigPath%\HostsX.orzsource
 		GoSub UpdateOtherHosts
+	IfNotExist,%ConfigPath%\HostsXWhitelist.orzhosts
+		GoSub UpdateWhitelist
 }
+Gosub ParseWhitelist
+
 Loop, %0%  ; For each parameter:
 {
     param := %A_Index%  ; Fetch the contents of the variable whose name is contained in A_Index.
@@ -888,23 +896,23 @@ Menu, UpdateMenu, Add, 更新 HostsX 广告屏蔽数据(&U), UpdateHostsFile
 Menu, UpdateMenu, Add, HostsX.orzHosts 当前版本：%Commentversion%, UpdateHostsFile
 Menu, UpdateMenu, Disable, HostsX.orzHosts 当前版本：%Commentversion%
 Menu, UpdateMenu, Add
-Menu, UpdateMenu, Add, 更新 HostsX 白名单数据(&W), UpdateWhitelist
-Menu, UpdateMenu, Add, HostsXWhitelist.orzHosts 当前版本：88888888, UpdateHostsFile
-Menu, UpdateMenu, Disable, HostsXWhitelist.orzHosts 当前版本：88888888
+Menu, UpdateMenu, Add, 更新 HostsX 白名单及除错数据(&W), UpdateWhitelist
+Menu, UpdateMenu, Add, HostsXWhitelist.orzHosts 当前版本：%commentwhitelistversion%, UpdateHostsFile
+Menu, UpdateMenu, Disable, HostsXWhitelist.orzHosts 当前版本：%commentwhitelistversion%
 Menu, UpdateMenu, Add
-Menu, UpdateMenu, Add, 更新其他数据更新源(&P), UpdateOtherHosts
+Menu, UpdateMenu, Add, 更新 HostsX 推荐数据列表(&P), UpdateOtherHosts
 Menu, UpdateMenu, Add, HostsX.orzSource 当前版本：%Commentsourceversion%, UpdateHostsFile
 Menu, UpdateMenu, Disable, HostsX.orzSource 当前版本：%Commentsourceversion%
 Menu, UpdateMenu, Add
 Menu, UpdateMenu, Add, 下载 HostsX 最新版本 %commenthostsxversion%(&H), orzTechPubPage
 Menu, UpdateMenu, Add, HostsX 当前版本：%applicationversion%, UpdateHostsFile
 Menu, UpdateMenu, Disable, HostsX 当前版本：%applicationversion%
-If (applicationversion!=commenthostsxversion)
-	TrayTip, HostsX 检测到新版本, orzTech | 囧科技已发布新版 HostsX。`r`n`r`n最新版本：%commenthostsxversion%`r`n当前版本：%applicationversion%`r`n`r`n请在“更新”菜单中下载。,,1
+IfNotInstring, applicationversion, dev
+{
+	If (applicationversion!=commenthostsxversion)
+		TrayTip, HostsX 检测到新版本, orzTech | 囧科技已发布新版 HostsX。`r`n`r`n最新版本：%commenthostsxversion%`r`n当前版本：%applicationversion%`r`n`r`n请在“更新”菜单中下载。,,1
+}
 Gui, 1:Menu, MyMenuBar
-
-UpdateWhitelist:
-return
 
 BuildBackupMenu:
 Gui 1:Menu
@@ -1402,6 +1410,103 @@ MainEditNew=%SectionBeginLine%`n%SectionContent%`n%SectionEndLine%
 MainEdit=%MainEditBefore%%MainEditNew%%MainEditAfter%
 Return
 
+ParseWhitelist:
+WhitelistValid = false
+IfNotExist, %ConfigPath%\HostsXWhitelist.orzhosts
+{
+	Return
+}
+WhitelistValid = true
+ArrayWhitelistCount = 0
+ArrayWhitelistFR = F
+Loop, Read, %ConfigPath%\HostsXWhitelist.orzhosts
+{
+	Length := StrLen(A_LoopReadLine)
+	if Length > 1
+	{
+		fch:=SubStr(A_LoopReadLine, 1, 1)
+		if fch=#
+		{
+			ArrayWhitelistCount += 1
+			caption2:=SubStr(A_LoopReadLine, 2)
+			StringReplace, captionmenu2, caption2, &, &&, All
+			ArrayWhiteListTitle%ArrayWhitelistCount%=%caption2%
+			ArrayWhiteListFind%ArrayWhitelistCount%=
+			ArrayWhiteListReplace%ArrayWhitelistCount%=
+			ArrayWhitelistFR = F
+		}
+		else if fch=;
+		{
+			comment:=SubStr(A_LoopReadLine, InStr(SubStr(A_LoopReadLine, 2), "=")+2)
+			commentname:=SubStr(SubStr(A_LoopReadLine, 1, InStr(A_LoopReadLine, "=")-1),2)
+			CommentWhiteList%commentname%:=comment
+		}
+		else if fch=$
+		{
+			ArrayWhitelistFR = R
+			ArrayWhiteListReplace%ArrayWhitelistCount%:=ArrayWhiteListReplace%ArrayWhitelistCount% . A_LoopReadLine . "`n"
+		}
+		else
+		{
+			If ArrayWhitelistFR = F
+			{
+				ArrayWhiteListFind%ArrayWhitelistCount%:=ArrayWhiteListFind%ArrayWhitelistCount% . A_LoopReadLine . "`n"
+			}
+			Else If ArrayWhitelistFR = R
+			{
+				ArrayWhiteListReplace%ArrayWhitelistCount%:=ArrayWhiteListReplace%ArrayWhitelistCount% . A_LoopReadLine . "`n"
+			}
+		}
+	}
+}
+Gosub BuildUpdateMenu
+;Msgbox % ArrayWhitelistCount
+;Msgbox % ArrayWhiteListTitle1
+;Msgbox % ArrayWhiteListFind1
+;Msgbox % ArrayWhiteListReplace1
+Return
+
+F10::
+CheckWhitelist:
+mSGBOX I AM A GOOD BOY
+Return
+
+UpdateWhitelist:
+TrayTip, HostsX 白名单及除错数据更新中, 正在访问 orzTech.com 更新点列表. . ., 30, 1
+updateList:=UrlDownloadToVar("http://orztech.com/labs/HostsX.lh/autoupdate.txt?type=HostsXWhitelist.orzhosts&ver=" . RegExReplace(applicationversion, " ", "+"))
+If ErrorLevel
+{
+	TrayTip, HostsX 白名单及除错数据更新失败, 无法访问 orzTech.com 更新点列表，请检查网络是否有问题并稍候重试。, 30, 3
+	Return
+}
+updateListCount=0
+Loop, parse, updateList, `n, `r  ; Specifying `n prior to `r allows both Windows and Unix files to be parsed.
+{
+	updateListCount+=1
+}
+TrayTip, HostsX 白名单及除错数据更新中, 已连接更新点列表，`n得到 %updateListCount% 个更新点。`n`n休息 1s 开始更新. . ., 30, 1
+Sleep, 1000
+updateListIndex=0
+Loop, parse, updateList, `n, `r  ; Specifying `n prior to `r allows both Windows and Unix files to be parsed.
+{
+	updateListIndex+=1
+	TrayTip, HostsX 白名单及除错数据更新中, 正在连接第 %updateListIndex% 个更新点. . ., 30, 1
+    UrlDownloadToFile, %A_LoopField%HostsXWhitelist.orzhosts, %ConfigPath%\HostsXWhitelist.orzhosts
+	If ErrorLevel
+	{
+		TrayTip, HostsX 白名单及除错数据更新中, 无法连接第 %updateListIndex% 个更新点，`n`n休息 2s 使用下个更新点. . ., 30, 2
+		Sleep, 2000
+	}
+	Else
+	{
+		Gosub ParseWhitelist
+		TrayTip, HostsX 白名单及除错数据更新完成, 最新版本号：%Commentversion%。`n请通过“工具”菜单进行白名单检查。, 30, 1
+		return
+	}
+}
+TrayTip, HostsX 白名单及除错数据更新失败, 无法连接任何更新点，请检查网络是否有问题并稍候重试。, 30, 3
+return
+
 UpdateHostsFile:
 TrayTip, HostsX 数据更新中, 正在访问 orzTech.com 更新点列表. . ., 30, 1
 updateList:=UrlDownloadToVar("http://orztech.com/labs/HostsX.lh/autoupdate.txt?type=HostsX.orzhosts&ver=" . RegExReplace(applicationversion, " ", "+"))
@@ -1442,6 +1547,7 @@ Return
 UpdateAll:
 GoSub UpdateHostsFile
 Gosub UpdateOtherHosts
+GoSub UpdateWhitelist
 Return
 
 OneKeyUpdate:
@@ -1449,6 +1555,7 @@ ToolTip, 一键更新中 . . .
 Gui +Disabled
 GoSub UpdateHostsFile
 Gosub UpdateOtherHosts
+GoSub UpdateWhitelist
 InsertHostsItems=
 InsertHostsItemsNoAdd=true
 Gosub InsertHostsItems
@@ -1499,11 +1606,11 @@ TrayTip, HostsX 提示, 一键更新执行成功，请检查更新结果。,30,1
 Return
 
 UpdateOtherHosts:
-TrayTip, 其他数据更新源数据更新中, 正在访问 orzTech.com 更新点列表. . ., 30, 1
+TrayTip, HostsX 推荐数据列表更新中, 正在访问 orzTech.com 更新点列表. . ., 30, 1
 updateList:=UrlDownloadToVar("http://orztech.com/labs/HostsX.lh/autoupdate.txt?type=HostsX.orzsource&ver=" . RegExReplace(applicationversion, " ", "+"))
 If ErrorLevel
 {
-	TrayTip, 其他数据更新源数据更新失败, 无法访问 orzTech.com 更新点列表，请检查网络是否有问题并稍候重试。, 30, 3
+	TrayTip, HostsX 推荐数据列表更新失败, 无法访问 orzTech.com 更新点列表，请检查网络是否有问题并稍候重试。, 30, 3
 	Return
 }
 updateListCount=0
@@ -1511,28 +1618,28 @@ Loop, parse, updateList, `n, `r  ; Specifying `n prior to `r allows both Windows
 {
 	updateListCount+=1
 }
-TrayTip, 其他数据更新源数据更新中, 已连接更新点列表，`n得到 %updateListCount% 个更新点。`n`n休息 1s 开始更新. . ., 30, 1
+TrayTip, HostsX 推荐数据列表更新中, 已连接更新点列表，`n得到 %updateListCount% 个更新点。`n`n休息 1s 开始更新. . ., 30, 1
 Sleep, 1000
 updateListIndex=0
 Loop, parse, updateList, `n, `r  ; Specifying `n prior to `r allows both Windows and Unix files to be parsed.
 {
 	updateListIndex+=1
-	TrayTip, 其他数据更新源数据更新中, 正在连接第 %updateListIndex% 个更新点. . ., 30, 1
+	TrayTip, HostsX 推荐数据列表更新中, 正在连接第 %updateListIndex% 个更新点. . ., 30, 1
     UrlDownloadToFile, %A_LoopField%HostsX.orzsource, %ConfigPath%\HostsX.orzsource
 	If ErrorLevel
 	{
-		TrayTip, 其他数据更新源数据数据更新中, 无法连接第 %updateListIndex% 个更新点，`n`n休息 2s 使用下个更新点. . ., 30, 2
+		TrayTip, HostsX 推荐数据列表数据更新中, 无法连接第 %updateListIndex% 个更新点，`n`n休息 2s 使用下个更新点. . ., 30, 2
 		Sleep, 2000
 	}
 	Else
 	{
 		GoSub BuildInsertMenu
-		TrayTip, 其他数据更新源数据更新完成, 最新版本号：%Commentsourceversion%。`n请通过“插入”菜单插入最新版本数据了。, 30, 1
+		TrayTip, HostsX 推荐数据列表更新完成, 最新版本号：%Commentsourceversion%。`n请通过“插入”菜单插入最新版本数据了。, 30, 1
 		Gosub BuildUpdateMenu
 		return
 	}
 }
-TrayTip, 其他数据更新源数据更新失败, 无法连接任何更新点，请检查网络是否有问题并稍候重试。, 30, 3
+TrayTip, HostsX 推荐数据列表更新失败, 无法连接任何更新点，请检查网络是否有问题并稍候重试。, 30, 3
 Return
 
 
@@ -1591,7 +1698,7 @@ UrlDownloadToVar(URL, Proxy="", ProxyBypass="") {
 HostsDelComments:
 Gui +Disabled
 GuiControlGet, MainEdit
-MainEdit:=RegExReplace(MainEdit, "im)(*ANYCRLF)^[^0-9:].*$", "")
+MainEdit:=RegExReplace(MainEdit, "im)(*ANYCRLF)^[^0-9a-f:].*$", "")
 MainEdit:=RegExReplace(MainEdit, "`n+", "`n")
 MainEdit:=RegExReplace(MainEdit, "^`n", "")
 MainEdit:=RegExReplace(MainEdit, "`n$", "")
@@ -1603,7 +1710,10 @@ Return
 HostsSort:
 Gui +Disabled
 GuiControlGet, MainEdit
-MainEdit:=RegExReplace(MainEdit, "im)(*ANYCRLF)^[^0-9:].*$", "")
+MainEdit:=RegExReplace(MainEdit, "im)(*ANYCRLF)^[^0-9a-f:].*$", "")
+MainEdit:=RegExReplace(MainEdit, "im)(*ANYCRLF)#.*$", "`n")
+MainEdit:=RegExReplace(MainEdit, "im)(*ANYCRLF)\s*$", "`n")
+MainEdit:=RegExReplace(MainEdit, "im)(*ANYCRLF)^\s*", "`n")
 MainEdit:=RegExReplace(MainEdit, "`n+", "`n")
 MainEdit:=RegExReplace(MainEdit, "^`n", "")
 MainEdit:=RegExReplace(MainEdit, "`n$", "")
