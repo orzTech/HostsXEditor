@@ -147,12 +147,19 @@ Menu, EditMenu, Add, 全选(&A)`tCtrl+A, EditSelectAll
 Menu, FormatMenu, Add, 字体(&F)..., FormatFont
 Menu, FormatMenu, Add
 Menu, FormatMenu, Add, 纠正换行符号错误并删除空行(&R), HostsWrap
-Menu, FormatMenu, Add, 仅删除注释(&G), HostsDelComments
-Menu, FormatMenu, Add, 删除注释、重复项并排序(&H), HostsSort
+Menu, FormatMenu, Add
+Menu, FormatMenu, Add, 注释(&M), HostsSortSelectedComment
+Menu, FormatMenu, Add, 取消注释(&D), HostsSortSelectedUnComment
+Menu, FormatMenu, Add, 删除注释(&D), HostsDelComments
+Menu, FormatMenu, Add
+Menu, FormatMenu, Add, 按照域名排序(&S), HostsSortSelected
+Menu, FormatMenu, Add, 删除重复项并按照域名排序(&H), HostsSort
+Menu, FormatMenu, Add, 按照域名分类(&C), HostsSortSelectedCategorized
+Menu, FormatMenu, Add, 删除重复项并按照域名分类(&O), HostsSortCategorized
 Menu, FormatMenu, Add
 Menu, FormatMenu, Add, 屏蔽转向统一使用 0.0.0.0(&0), HostsReplace0000
 Menu, FormatMenu, Add, 屏蔽转向统一使用 127.0.0.1(&1), HostsReplace127001
-Menu, FormatMenu, Add, 屏蔽转向统一使用 127.1（仅限 Windows Vista 之前版本）(&2), HostsReplace1271
+Menu, FormatMenu, Add, 屏蔽转向统一使用 127.1(&2), HostsReplace1271
 
 
 GoSub BuildInsertMenu
@@ -1952,82 +1959,172 @@ UrlDownloadToVar(URL, Proxy="", ProxyBypass="") {
 }
 
 HostsDelComments:
-Gui +Disabled
-GuiControlGet, MainEdit
-MainEdit:=RegExReplace(MainEdit, "im)(*ANYCRLF)^[^0-9a-f.:].*$", "")
-MainEdit:=RegExReplace(MainEdit, "`n+", "`n")
-MainEdit:=RegExReplace(MainEdit, "^`n", "")
-MainEdit:=RegExReplace(MainEdit, "`n$", "")
-GuiControl,, MainEdit, %MainEdit%
-Gui -Disabled
-TrayTip, HostsX 提示, 删除注释已完成！, 30, 1
+GuiControl, Focus, MainEdit
+ClipSaved := ClipboardAll
+Clipboard=
+Send ^C
+If Clipboard=
+	Send ^A^C
+Clipboard2=%Clipboard%
+StringReplace, Clipboard2, Clipboard2, `r, `n, All
+StringReplace, Clipboard2, Clipboard2, `n, `n, All
+Clipboard2:=RegExReplace(Clipboard2, "^`n", "")
+Clipboard2:=RegExReplace(Clipboard2, "`n$", "")
+Clipboard2:=RegExReplace(Clipboard2, "`n+", "`n")
+Clipboard2:=RegExReplace(Clipboard2, "im)(*ANYCRLF)^[^0-9a-f.:].*$", "")
+Clipboard2:=RegExReplace(Clipboard2, "im)(*ANYCRLF)#.*$", "`n")
+Clipboard2:=RegExReplace(Clipboard2, "im)(*ANYCRLF);.*$", "`n")
+StringReplace, Clipboard2, Clipboard2, `n, `r`n, All
+Clipboard=%Clipboard2%
+GuiControl, Focus, MainEdit
+Send ^V
+Clipboard := ClipSaved
+Return
+
+HostsSortSelectedUnComment:
+GuiControl, Focus, MainEdit
+ClipSaved := ClipboardAll
+Clipboard=
+Send ^C
+If Clipboard=
+	Send {END}+{HOME}^C
+Clipboard2=%Clipboard%
+StringReplace, Clipboard2, Clipboard2, `r, `n, All
+StringReplace, Clipboard2, Clipboard2, `n, `n, All
+Clipboard2:=RegExReplace(Clipboard2, "^`n", "")
+Clipboard2:=RegExReplace(Clipboard2, "`n$", "")
+Clipboard2:=RegExReplace(Clipboard2, "`n+", "`n")
+Clipboard2:=RegExReplace(Clipboard2, "im)(*ANYCRLF)#(.*)$", "$1")
+Clipboard2:=RegExReplace(Clipboard2, "im)(*ANYCRLF);(.*)$", "$1")
+StringReplace, Clipboard2, Clipboard2, `n, `r`n, All
+Clipboard=%Clipboard2%
+GuiControl, Focus, MainEdit
+Send ^V
+Clipboard := ClipSaved
+Return
+
+HostsSortSelectedComment:
+GuiControl, Focus, MainEdit
+ClipSaved := ClipboardAll
+Clipboard=
+Send ^C
+If Clipboard=
+	Send {END}+{HOME}^C
+Clipboard2=%Clipboard%
+Clipboard2:=RegExReplace(Clipboard2, "im)^", "#")
+Clipboard=%Clipboard2%
+
+GuiControl, Focus, MainEdit
+Send ^V
+Clipboard := ClipSaved
 Return
 
 HostsSort:
+GuiControl, Focus, MainEdit
+ClipSaved := ClipboardAll
+Clipboard=
+Send ^C
+If Clipboard=
+	Send ^A^C
 Gui +Disabled
-GuiControlGet, MainEdit
-MainEdit:=RegExReplace(MainEdit, "im)(*ANYCRLF)^[^0-9a-f.:].*$", "")
-MainEdit:=RegExReplace(MainEdit, "im)(*ANYCRLF)#.*$", "`n")
-MainEdit:=RegExReplace(MainEdit, "im)(*ANYCRLF)\s*$", "`n")
-MainEdit:=RegExReplace(MainEdit, "im)(*ANYCRLF)^\s*", "`n")
-MainEdit:=RegExReplace(MainEdit, "`n+", "`n")
-MainEdit:=RegExReplace(MainEdit, "^`n", "")
-MainEdit:=RegExReplace(MainEdit, "`n$", "")
-MainEdit:=RegExReplace(MainEdit, "[ 	]+", "`t")
 Tooltip, 排序中...
-Sort, MainEdit, F HostsSort U
+Clipboard2=%Clipboard%
+StringReplace, Clipboard2, Clipboard2, `r, `n, All
+StringReplace, Clipboard2, Clipboard2, `n, `n, All
+Clipboard2:=RegExReplace(Clipboard2, "`n+", "`n")
+Clipboard2:=RegExReplace(Clipboard2, "^`n", "")
+Clipboard2:=RegExReplace(Clipboard2, "`n$", "")
+Clipboard2:=RegExReplace(Clipboard2, "im)(*ANYCRLF)^[^0-9a-f.:].*$", "")
+Clipboard2:=RegExReplace(Clipboard2, "im)(*ANYCRLF)#.*$", "`n")
+Clipboard2:=RegExReplace(Clipboard2, "im)(*ANYCRLF);.*$", "`n")
+Clipboard2:=RegExReplace(Clipboard2, "im)(*ANYCRLF)\s*$", "`n")
+Clipboard2:=RegExReplace(Clipboard2, "im)(*ANYCRLF)^\s*", "`n")
+Clipboard2:=RegExReplace(Clipboard2, "[ 	]+", "`t")
+StringReplace, Clipboard2, Clipboard2, `n, `r`n, All
+Sort, Clipboard2, F HostsSort U
+Clipboard=%Clipboard2%
 Tooltip
-GuiControl,, MainEdit, %MainEdit%
 Gui -Disabled
-TrayTip, HostsX 提示, 排序并删除重复项已完成！, 30, 1
+GuiControl, Focus, MainEdit
+Send ^V
+Clipboard := ClipSaved
 Return
 HostsSort(a1, a2)
 {
+	if (a1=a2)
+		return 0
 	b1:=RegExReplace(a1, "^(.*)`t(.*)$", "$2")
 	b2:=RegExReplace(a2, "^(.*)`t(.*)$", "$2")
+	
+	return b1 > b2 ? 1 : b1 < b2 ? -1 : 0
+}
+
+HostsSortSelected:
+GuiControl, Focus, MainEdit
+ClipSaved := ClipboardAll
+Clipboard=
+Send ^C
+If Clipboard=
+	Send ^A^C
+Gui +Disabled
+Tooltip, 排序中...
+Sort, Clipboard, F HostsSort U
+Tooltip
+Gui -Disabled
+GuiControl, Focus, MainEdit
+Send ^V
+Clipboard := ClipSaved
+Return
+
+HostsSortCategorized:
+GuiControl, Focus, MainEdit
+ClipSaved := ClipboardAll
+Clipboard=
+Send ^C
+If Clipboard=
+	Send ^A^C
+Gui +Disabled
+Tooltip, 排序中...
+Sort, Clipboard, F HostsSortCategorized U
+Tooltip
+Gui -Disabled
+GuiControl, Focus, MainEdit
+Send ^V
+Clipboard := ClipSaved
+Return
+
+HostsSortSelectedCategorized:
+GuiControl, Focus, MainEdit
+ClipSaved := ClipboardAll
+Clipboard=
+Send ^C
+If Clipboard=
+	Send ^A^C
+Gui +Disabled
+Tooltip, 排序中...
+Sort, Clipboard, F HostsSortCategorized U
+Tooltip
+GuiControl, Focus, MainEdit
+Send ^V
+Gui -Disabled
+Clipboard := ClipSaved
+Return
+
+HostsSortCategorized(a1, a2)
+{
+	if (a1=a2)
+		return 0
+	b1:=ReverseHostName(RegExReplace(a1, "^(.*)`t(.*)$", "$2"))
+	b2:=ReverseHostName(RegExReplace(a2, "^(.*)`t(.*)$", "$2"))
+	
 	return b1 > b2 ? 1 : b1 < b2 ? -1 : 0
 }
 
 
-HostsSortDie(a1, a2)
+ReverseHostName(hostName)
 {
-
-	a21:=RegExReplace(a1, "^(.*)`t(.*)$", "$1")
-	a22:=RegExReplace(a2, "^(.*)`t(.*)$", "$1")
-	b1:=RegExReplace(a1, "^(.*)`t(.*)$", "$2")
-	b2:=RegExReplace(a2, "^(.*)`t(.*)$", "$2")
-	StringSplit, c1, b1,.
-	c1:=c10-1
-	if c1<>-1
-	{
-		if c1=0
-			c1=1
-		c1:="c1" . c1
-		c1:=%c1%
-	}
-	Else
-		c1:=b1
-
-	StringSplit, c2, b2,.
-	c2:=c20-1
-	if c2<>-1
-	{
-		if c2=0
-			c2=1
-		c2:="c2" . c2
-		c2:=%c2%
-	}
-	Else
-		c2:=b2
-
-	If c1=c2
-	{
-		return 0
-	}
-	Else if c1 > c2
-		return 1
-	Else
-		return -1
+	Sort hostName, D. R
+	Return hostName
 }
 
 HostsReplace0000:
@@ -2086,11 +2183,18 @@ InsertHostsItemsNoAdd=
 Return
 
 HostsWrap:
-GuiControlGet, MainEdit
-StringReplace MainEdit, MainEdit, `r, `n`n, All
-StringReplace MainEdit, MainEdit, `n, `n`n, All
-MainEdit:=RegExReplace(MainEdit, "`n+", "`n")
-GuiControl,, MainEdit, %MainEdit%
+GuiControl, Focus, MainEdit
+ClipSaved := ClipboardAll
+Clipboard=
+Send ^C
+If Clipboard=
+	Send ^A^C
+StringReplace Clipboard, Clipboard, `r, `n`n, All
+StringReplace Clipboard, Clipboard, `n, `n`n, All
+Clipboard:=RegExReplace(Clipboard, "`n+", "`n")
+StringReplace, Clipboard, Clipboard, `n, `r`n, All
+Send ^V
+Clipboard := ClipSaved
 Return
 
 
