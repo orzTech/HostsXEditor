@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<!--EmEditor Project file-->
+<Project>
+<Files>
+	<File RelativePath="history.txt"/>
+	<File RelativePath="HostsX.ahk"/>
+</Files>
+</Project>
