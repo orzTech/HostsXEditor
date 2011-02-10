@@ -3,6 +3,17 @@
 #Persistent
 #SingleInstance off
 
+If 1=/admin
+{
+	ModuleName = %2%
+	Menu, Tray, NoStandard
+	if IsFunc("AdminModule" . ModuleName)
+	{
+		AdminModule%ModuleName%()
+	}
+	ExitApp
+}
+
 IfExist %A_ScriptFullPath%.dat\*
 	ConfigFoundHere = true
 
@@ -107,13 +118,12 @@ FileInstall orzTech.com.png, %ConfigPath%\orzTech.com.png
 applicationname=HostsX
 applicationfunction=新一代记事本风格的 Hosts 文件编辑工具。
 applicationtip=
-applicationversion=0.4.0.1024 dev
+applicationversion=0.4.2.1024
 
 Gosub ReloadSettings
 
 BuildMenu:
-;#debug
-;Menu, Tray, NoStandard
+Menu, Tray, NoStandard
 Menu, Tray, Add, 关于 HostsX(&A), HelpAbout
 Menu, Tray, Add
 Menu, Tray, Add, 退出 HostsX(&X), FileExit
@@ -177,6 +187,8 @@ Menu, ToolsMenu, Add, 执行 Ping 操作(&P), ToolsPing
 Menu, ToolsMenu, Add, 执行 NSLookup 操作(&N), ToolsNSLookup
 Gosub BuildUpdateMenu
 
+Gosub BuildADPMenu
+
 Menu, HelpMenu, Add, HostsX 帮助(&H), orzTechHelpPage
 Menu, HelpMenu, Add, HostsX 发布页面(&P), orzTechPubPage
 Menu, HelpMenu, Add, HostsX 鸣谢列表(&A), orzTechAcknowledgementsPage
@@ -203,6 +215,7 @@ Menu, MyMenuBar, Add, 工具(&T), :ToolsMenu
 Menu, MyMenuBar, Add, 备份(&B), :BackupMenu
 Menu, MyMenuBar, Add, 更新(&U), :UpdateMenu
 Menu, MyMenuBar, Add, 选项(&P), :OptionsMenu
+Menu, MyMenuBar, Add, ADP(&A), :ADPMenu
 Menu, MyMenuBar, Add, 帮助(&H), :HelpMenu
 Gui, 1:Menu, MyMenuBar
 
@@ -263,7 +276,6 @@ Gosub ParseWhitelist
 Loop, %0%  ; For each parameter:
 {
     param := %A_Index%  ; Fetch the contents of the variable whose name is contained in A_Index.
-    StringUpper, param, param
     if param=auto
     	Gosub AutoParam
 }
@@ -289,6 +301,9 @@ return
 
 ^O::
 FileOpen:
+GoSub CheckSave
+if ErrorLevel
+	Return
 Gui +OwnDialogs  ; Force the user to dismiss the FileSelectFile dialog before returning to the main window.
 FileSelectFile, SelectedFileName, 3,, 打开 Hosts 文件
 if SelectedFileName =  ; No file selected.
@@ -918,6 +933,174 @@ Menu, InsertMenuItems, Disable, 版本：%Commentversion%
 Menu, InsertMenuItems, Add, 作者：%Commentauthor%, InsertMenuAction
 Menu, InsertMenuItems, Disable, 作者：%Commentauthor%
 Return
+
+BuildADPMenu:
+Gui 1:Menu
+Menu, ADPMenu, Add,
+Menu, ADPMenu, DeleteAll
+AcrylicPath=
+RegRead, AcrylicPath, HKLM, SYSTEM\CurrentControlSet\services\AcrylicController, ImagePath
+if ErrorLevel
+{
+	AcrylicInstalled = false
+}
+else
+{
+	AcrylicInstalled = true
+	StringReplace AcrylicDir, AcrylicPath, AcrylicService.exe, , All
+}
+if AcrylicInstalled = true
+{
+	Menu, ADPMenu, Add, 更新 Acrylic DNS Proxy(&A), ADPUpdate
+	Menu, ADPMenu, Add
+	Menu, ADPMenu, Add, 刷新 Acrylic DNS Proxy 缓存(&R), ADPRefreshCache
+	Menu, ADPMenu, Add, 启动 Acrylic DNS Proxy 服务(&S), ADPStartService
+	Menu, ADPMenu, Add, 停止 Acrylic DNS Proxy 服务(&T), ADPStopService
+	Menu, ADPMenu, Add, 重启 Acrylic DNS Proxy 服务(&E), ADPRestartService
+	Menu, ADPMenu, Add
+	Menu, ADPMenu, Add, 编辑 Acrylic DNS Proxy 配置文件(&C), ADPEditConfig
+	Menu, ADPMenu, Add, 编辑 Acrylic DNS Proxy Hosts 文件(&T), ADPEdirHosts
+	Menu, ADPMenu, Add
+	Menu, ADPMenu, Add, 卸载 Acrylic DNS Proxy(&U), ADPUninstall
+}
+Else
+	Menu, ADPMenu, Add, 安装 Acrylic DNS Proxy(&A), ADPSetup
+
+Menu, ADPMenu, Add
+Menu, ADPMenu, Add, 这是什么？(&H), ADPWhatsThis
+Gui, 1:Menu, MyMenuBar
+return
+
+ADPUpdate:
+Gosub ADPValid
+If Errorlevel
+	Return
+_ADPUpdate=1
+ADPSetup:
+EnvGet, Temp, Temp
+Random, rand, 10000, 99999
+ToolTip, Downloading from http://9bu.org/3c. . . 
+UrlDownloadToFile,http://9bu.org/3c, %temp%\HostsX%rand%.exe
+Tooltip
+RunWait, %temp%\HostsX%rand%.exe,,UseErrorLevel
+FileDelete, %temp%\HostsX%rand%.exe
+Gosub BuildADPMenu
+If _ADPUpdate=1
+{
+	_ADPUpdate=
+}
+Else
+{
+	iF AcrylicInstalled = true
+		Gosub ADPEditConfig
+}
+
+Return
+
+ADPUninstall:
+Gosub ADPValid
+If Errorlevel
+	Return
+RunWait, %AcrylicDir%Uninstall.exe,,UseErrorLevel
+SetTimer, BuildADPMenu, -60000
+Gosub BuildADPMenu
+Return
+
+ADPWhatsThis:
+	Run,http://9bu.org/3b
+Return
+
+ADPValid:
+ErrorLevel=0
+IfExist, %AcrylicPath%
+	Return
+Else
+{
+	Gosub BuildADPMenu
+	Errorlevel = 1
+}
+Return
+
+ADPStartService:
+Gosub ADPValid
+If Errorlevel
+	Return
+	RunAdminModule("ADPStartService")
+Return
+
+AdminModuleADPStartService()
+{
+	RunWait, %comspec% /c "NET START `"Acrylic DNS Proxy Service`" & pause"
+}
+
+ADPStopService:
+Gosub ADPValid
+If Errorlevel
+	Return
+	RunAdminModule("ADPStopService")
+Return
+
+AdminModuleADPStopService()
+{
+	RunWait, %comspec% /c "NET STOP `"Acrylic DNS Proxy Service`" & pause"
+}
+
+ADPRestartService:
+Gosub ADPValid
+If Errorlevel
+	Return
+	RunAdminModule("ADPRestartService")
+Return
+
+AdminModuleADPRestartService()
+{
+	RunWait, %comspec% /c "NET STOP `"Acrylic DNS Proxy Service`" & NET START `"Acrylic DNS Proxy Service`" & pause"
+}
+
+ADPEditConfig:
+Gosub ADPValid
+If Errorlevel
+	Return
+GoSub CheckSave
+if ErrorLevel
+Return
+
+_checkWhitelistAfterOpen = %CheckWhitelistAfterOpen%
+CheckWhitelistAfterOpen = orzNo
+SelectedFileName =%AcrylicDir%AcrylicConfiguration.ini
+Gosub FileRead
+CheckWhitelistAfterOpen = %_checkWhitelistAfterOpen%
+return
+
+ADPEdirHosts:
+Gosub ADPValid
+If Errorlevel
+	Return
+GoSub CheckSave
+if ErrorLevel
+Return
+SelectedFileName =%AcrylicDir%AcrylicHosts.txt
+Gosub FileRead
+return
+
+ADPRefreshCache:
+Gosub ADPValid
+If Errorlevel
+	Return
+	RunAdminModule("ADPRefreshCache")
+Return
+
+AdminModuleADPRefreshCache()
+{
+	RegRead, AcrylicPath, HKLM, SYSTEM\CurrentControlSet\services\AcrylicController, ImagePath
+	if ErrorLevel
+	{}
+	else
+	{
+		StringReplace AcrylicDir, AcrylicPath, AcrylicService.exe, , All
+		RunWait, %comspec% /c "NET STOP `"Acrylic DNS Proxy Service`" & DEL /F `"%AcrylicDir%AcrylicCache.dat`" & IPCONFIG /FlushDNS & NET START `"Acrylic DNS Proxy Service`" & pause"
+	}
+}
 
 BuildUpdateMenu:
 Gui 1:Menu
@@ -2357,21 +2540,50 @@ Return
 
 F5::
 ToolsLockHosts:
-ToolTip 正在给 Hosts 文件加锁. . .
-RunWait, %comspec% /c "echo y|cacls %A_WinDir%\System32\drivers\etc\hosts /g everyone:r",, Hide
-FileSetAttrib +ASRH,%A_WinDir%\System32\drivers\etc\hosts
-ToolTip
-TrayTip, HostsX 提示, Hosts 文件加锁成功。, 30, 1
+	RunAdminModule("LockHosts")
 Return
 
 F6::
 ToolsUnlockHosts:
-ToolTip 正在给 Hosts 文件解锁. . .
-RunWait, %comspec% /c "echo y|cacls %A_WinDir%\System32\drivers\etc\hosts /g everyone:f >nul",, Hide
-FileSetAttrib -ASRH, %A_WinDir%\System32\drivers\etc\hosts
-ToolTip
-TrayTip, HostsX 提示, Hosts 文件解锁成功。, 30, 1
+	RunAdminModule("UnlockHosts")
 Return
+
+RequestAdmin(Args)
+{
+	if not A_IsAdmin
+	{
+		If A_IsCompiled=0
+			DllCall("shell32\ShellExecuteA", uint, 0, str, "RunAs", str, A_AhkPath , str, """" . A_ScriptFullPath . """" . Args, str, A_WorkingDir, int, 1)
+		Else
+			DllCall("shell32\ShellExecuteA", uint, 0, str, "RunAs", str, A_ScriptFullPath , str, Args, str, A_WorkingDir, int, 1)
+	}
+	else
+	{
+		If A_IsCompiled=0
+			DllCall("shell32\ShellExecuteA", uint, 0, str, "open", str, A_AhkPath , str, """" . A_ScriptFullPath . """" . Args, str, A_WorkingDir, int, 1)
+		Else
+			DllCall("shell32\ShellExecuteA", uint, 0, str, "open", str, A_ScriptFullPath , str, Args, str, A_WorkingDir, int, 1)
+	}
+}
+
+RunAdminModule(Args)
+{
+	RequestAdmin("/admin " . Args)
+}
+
+AdminModuleLockHosts()
+{
+	RunWait, %comspec% /c "echo y|cacls %A_WinDir%\System32\drivers\etc\hosts /g everyone:r",, Hide
+	FileSetAttrib +ASRH,%A_WinDir%\System32\drivers\etc\hosts
+	MsgBox, 64, , Hosts 文件加锁成功。
+}
+
+AdminModuleUnlockHosts()
+{
+	RunWait, %comspec% /c "echo y|cacls %A_WinDir%\System32\drivers\etc\hosts /g everyone:f >nul",, Hide
+	FileSetAttrib -ASRH, %A_WinDir%\System32\drivers\etc\hosts
+	MsgBox, 64, , Hosts 文件解锁成功。
+}
 
 FormatFont:
 Gui +Disabled  ; Force the user to dismiss the FileSelectFile dialog before returning to the main window.
@@ -2953,19 +3165,28 @@ Gui, Show
 Gosub, FileSave
 ExitApp
 
+PrepareEgg:
+EggText=http://pandazone.net/viewthread.php?tid=11759`t【CLANNAD】IM － Ana/軼事（中英）`n`nThe place changes and goes. Like a wind, like clouds.`t這片土地瞬息萬變 像清風 像白雲`nLike the traces of the heart, no halt at the places.`t像心之軌跡 沒有一刻停息`n`nThe place is so far away, be far apart.`t這片土地是如此遙遠 遙遠`nPeople`'s hand does not reach. so merely has (the) worship.`t人們無法觸及 因此沒有崇敬之情`n`nThe place is a lofty lord. Can`'t meet nobody put on.`t這片土地仿佛是心頭重負 無人能夠承受`nWe will lose the place. So lofty which changes.`t我們將失去這個地方 它是如此高不可攀`n`nNot all were desired. However, we`'re never sad.`t雖然不盡如人意 但我們並不憂傷`nStill, there is still the place. far away. far away.`t這片土地依舊存在 遙不可及`n`n(The wind) blows through the place. an endless, with all.`t風兒路過此地撒下萬種風情`nLike the ripple float on the water. It blows at as it goes.`t宛如水面上的波紋 多少漣漪在蕩漾`n`nThe place is no make at all. Nothing is shown.`t此地渾然天成 看不見任何事物`nLike the sand clasped by hand. It falls vainly.`t仿佛手裏緊握的沙子 轉眼便從指間滑過`n`nThe place is (a) profound lord, and wear the vain faint light.`t這片土地是如此幽深 被一道虛幻的微光所圍`nBut we will find it in the place. The heart at which it stands still.`t但我們一定要找到 那間佇立於此的小屋`n`nIf not concerned with all, It will maintain that no die.`t倘若漠不關心 它將依然沒有色彩`nTherefore there is still the heart. It`'s lonely, solitary.`t有這樣一間小屋 孤獨的立在那裏`n`nNo halt at the wind. it soars to the sky.`t順風而行 在空中飄揚`nLike the verdure (which) meets with sunrise, It grows up as reborn.`t就像綠芽沐浴在陽光中 茁壯成長`n`nThe heart has held new one. that`'s different from all.`t小屋來了新客人 有些與眾不同`nLike the sand castle of the children, but realized with the mind.`t就像孩子的沙堡 但心中可以明白`n`nThe person is a vain statue. wear taciturnity calm.`t他是一座虛無的雕像 沉沒無語`nStill, We will know a huge flow. It is stopped by nobody.`t我們知道洪潮即將來臨 無人能擋`n`nSoon, the wind wears the snow cloud. will be died to snow-white.`t很快 風披上了雪的外衣 被染成了銀白`nSummer grass will incline, No sunlight, feebly shade.`t夏草將臥躺 沒有日光 柔弱地陰涼處`n`nThe place buried in deep snow. like the collapsing castle.`t這片土地被深埋在積雪中 像那坍塌的城堡`nLike the head of the shade, figure will be thrown away.`t像那陰影的一角 形象盡不拋棄`n`nThe heart buried in deep snow. It sinks in to the flood.`t小屋被厚厚的雪覆蓋 深陷其中`nAnd the `"not dying`" is died out, and waits for a oppose one.`t全身被染上色彩 等待對手的到來`n`nEven if all are healed, be gone no return.`t縱使萬物恢復原貌 也是一去不復返`nThere is still the place. far way. far away.`t這片土地依舊存在 遙不可及`n`nThe place changes and goes. Like a wind, like clouds.`t此地瞬息萬變 像清風 像白雲`nLike the traces of the heart, no halt at the places. `t像心之軌跡 沒有一刻停息`n`nThe place is a lofty lord. can`'t meet nobody put on.`t此地仿佛是心頭重負 無人能夠承受`nStill, there is still the place. far away. far away.`t這片土地依舊存在 遙不可及…
+StringSplit, Egg, EggText, `n
+EggText=
+Return
+
 ^#!+Z::
-Egg1=彩蛋，
-Egg2=彩蛋而已。
-if Egg=2
+if EggDone = true
 {
 	Menu, IAMEgg, Show
-	Return
+	return
 }
-if Egg=
-	Egg=0
-Egg += 1
-Egggg:=Egg%Egg%
-Menu, IAMEgg, Add, %Egggg%, None
+Gosub PrepareEgg
+Egg=0
+Loop, %Egg0%
+{
+	Egg += 1
+	Egggg:=Egg%Egg%
+	Egg%Egg%=
+	EggDone = true
+	Menu, IAMEgg, Add, %Egggg%, None
+}
 Menu, IAMEgg, Show
 Return
 
