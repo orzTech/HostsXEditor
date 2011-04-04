@@ -8,6 +8,9 @@
 !!!Android Hosts
 !!!orztech站更新faq #38 关于代理服务器
 
+2011-04-04 (0.5.2.1)
+修复 bug：Hosts 文件加锁后因所有者问题无法解锁。（#HX46、#HX47、#HX51、#HX53、#HX58-3、#HX65、#HX69、#HX70，thank 金闪闪、zsxflzt、轰炸机、一个新手、netkeeper、vxlinjie、gvbcn、luoluo）
+
 2011-01-31 (0.4.2.1024)
 增加新功能：白名单除错系统，顺带支持打开文件后自动根据 HostsX 白名单除错及静默模式。一键更新时也会静默自动除错。
 增加新功能：在只读媒介等无法写入的地方使用时，将配置目录放在 <code>%AppData%</code> 中保证程序正常运行。

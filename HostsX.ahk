@@ -5,7 +5,9 @@
 
 If 1=/admin
 {
-	ModuleName = %2%
+	PopularFile=%A_WinDir%\System32\drivers\etc\hosts
+	SystemHosts=%PopularFile%
+	ModuleName=%2%
 	Menu, Tray, NoStandard
 	if IsFunc("AdminModule" . ModuleName)
 	{
@@ -118,7 +120,7 @@ FileInstall orzTech.com.png, %ConfigPath%\orzTech.com.png
 applicationname=HostsX
 applicationfunction=新一代记事本风格的 Hosts 文件编辑工具。
 applicationtip=
-applicationversion=0.4.2.1024
+applicationversion=0.5.2.1
 
 Gosub ReloadSettings
 
@@ -538,6 +540,12 @@ Loop, parse, drives,,
 	Gosub FillPopularFile
 	
 	PopularFile=%A_LoopField%:\Windows\SysWOW64\drivers\etc\hosts
+	Gosub FillPopularFile
+	
+	PopularFile=%A_LoopField%:\Windows\SysWOW64\drivers\128837
+	Gosub FillPopularFile
+	
+	PopularFile=%A_LoopField%:\Windows\SysWOW64\drivers\138110
 	Gosub FillPopularFile
 
 	PopularFile=%A_LoopField%:\WinNT\System32\drivers\etc\hosts
@@ -2573,15 +2581,18 @@ RunAdminModule(Args)
 
 AdminModuleLockHosts()
 {
-	RunWait, %comspec% /c "echo y|cacls %A_WinDir%\System32\drivers\etc\hosts /g everyone:r",, Hide
-	FileSetAttrib +ASRH,%A_WinDir%\System32\drivers\etc\hosts
+	global
+	RunWait, %comspec% /c "echo y|cacls %SystemHosts% /g everyone:r",, Hide
+	FileSetAttrib +ASRH,%SystemHosts%
 	MsgBox, 64, , Hosts 文件加锁成功。
 }
 
 AdminModuleUnlockHosts()
 {
-	RunWait, %comspec% /c "echo y|cacls %A_WinDir%\System32\drivers\etc\hosts /g everyone:f >nul",, Hide
-	FileSetAttrib -ASRH, %A_WinDir%\System32\drivers\etc\hosts
+	global
+	RunWait, %comspec% /c "takeown /f %SystemHosts%",, Hide
+	RunWait, %comspec% /c "echo y|cacls %SystemHosts% /g everyone:f >nul",, Hide
+	FileSetAttrib -ASRH, %SystemHosts%
 	MsgBox, 64, , Hosts 文件解锁成功。
 }
 
@@ -3203,11 +3214,11 @@ MsgBox, 36,, 您好，感谢您选择 orzTech | 囧科技 出品的 HostsX。`r`n`r`n这是您第一
 IfMsgBox Yes
     Run, http://orztech.com/softwares/hostsx/help
 
-IfExist,%A_WinDir%\System32\drivers\etc\hosts
+IfExist,%SystemHosts%
 {
-	FileRead, BackupContents, %A_WinDir%\System32\drivers\etc\hosts
+	FileRead, BackupContents, %SystemHosts%
 	FormatTime, TimeStamp, , yyMMdd_HHmm
-	BackupName = %TimeStamp%auto_%A_WinDir%\System32\drivers\etc\hosts
+	BackupName = %TimeStamp%auto_%SystemHosts%
 	StringReplace, BackupName, BackupName, \, _, All
 	StringReplace, BackupName, BackupName, /, _, All
 	StringReplace, BackupName, BackupName, :, _, All
