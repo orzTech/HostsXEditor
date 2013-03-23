@@ -290,6 +290,7 @@ Gui, Show,, HostsX
 Gui +LastFound
 hGui := WinExist()
 WinGet ControlID, ID
+GroupAdd, hostsx, ahk_id %ControlID%
 ControlGet, EditHandle, HWND,, Edit1, ahk_id %ControlID%
 DllCall("SendMessage", UInt, EditHandle, UInt, 0x00CB, UInt, 1, "UInt *", 100)
 CurrentFileName =  ; Indicate that there is no current file.
@@ -363,7 +364,7 @@ If CheckWhitelistAfterOpen = orzYes
 LogStatus("就绪，单击此处可查看历史日志。")
 return
 
-#IfWinActive HostsX ahk_class AutoHotkeyGUI
+#IfWinActive ahk_group hostsx
 ^N::
 FileNew:
 GoSub CheckSave
@@ -3127,7 +3128,11 @@ SetGUIFont(id)
 
 UpdateStatusBar(wParam, lParam)
 {
-    ControlGet, MainEditCurrentLine, CurrentLine,, edit1, A
-    ControlGet, MainEditCurrentCol, CurrentCol,, edit1, A
-    SB_SetText("Ln " MainEditCurrentLine ", Col " MainEditCurrentCol, 1)
+    global ControlID
+    IfWinActive ahk_id %ControlID%
+    {
+        ControlGet, MainEditCurrentLine, CurrentLine,, edit1, A
+        ControlGet, MainEditCurrentCol, CurrentCol,, edit1, A
+        SB_SetText("Ln " MainEditCurrentLine ", Col " MainEditCurrentCol, 1)
+    }
 }
