@@ -235,11 +235,56 @@ Gui, 1:Menu, MyMenuBar
 ; Create the main Edit control and display the window:
 Gui, +Resize  ; Make the window resizable.
 Gui, Margin, 0, 0
+SetGUIFont(1)
 Gui, Add, StatusBar, vMainStatus gMainStatus
 SB_SetText("", 2, 1)
 SB_SetParts(100)
+gui, font,, Fixedsys
+gui, font,, Courier
+gui, font,, Courier New
+gui, font,, Simsun
+gui, font,, Consolas
+gui, font,, Simsun_Yahei
+gui, font,, Monaco
+gui, font,, VL Gothic
 Gui Font, %Style% c%Color%, %Font%
 Gui, Add, Edit, vMainEdit WantTab WantReturn WantCtrlA HSCROLL -Wrap W800 R30
+
+OnMessage(0x0200, "UpdateStatusBar")
+OnMessage(0x0201, "UpdateStatusBar")
+OnMessage(0x0202, "UpdateStatusBar")
+OnMessage(0x0203, "UpdateStatusBar")
+OnMessage(0x0204, "UpdateStatusBar")
+OnMessage(0x0205, "UpdateStatusBar")
+OnMessage(0x0206, "UpdateStatusBar")
+OnMessage(0x0207, "UpdateStatusBar")
+OnMessage(0x0208, "UpdateStatusBar")
+OnMessage(0x0209, "UpdateStatusBar")
+OnMessage(0x020a, "UpdateStatusBar")
+OnMessage(0x020b, "UpdateStatusBar")
+OnMessage(0x020c, "UpdateStatusBar")
+OnMessage(0x020d, "UpdateStatusBar")
+OnMessage(0x020e, "UpdateStatusBar")
+OnMessage(0x020f, "UpdateStatusBar")
+
+OnMessage(0x0100, "UpdateStatusBar")
+OnMessage(0x0101, "UpdateStatusBar")
+OnMessage(0x0102, "UpdateStatusBar")
+OnMessage(0x0103, "UpdateStatusBar")
+OnMessage(0x0104, "UpdateStatusBar")
+OnMessage(0x0105, "UpdateStatusBar")
+OnMessage(0x0106, "UpdateStatusBar")
+OnMessage(0x0107, "UpdateStatusBar")
+OnMessage(0x0108, "UpdateStatusBar")
+OnMessage(0x0109, "UpdateStatusBar")
+OnMessage(0x010a, "UpdateStatusBar")
+OnMessage(0x010b, "UpdateStatusBar")
+OnMessage(0x010c, "UpdateStatusBar")
+OnMessage(0x010d, "UpdateStatusBar")
+OnMessage(0x010e, "UpdateStatusBar")
+OnMessage(0x010f, "UpdateStatusBar")
+
+
 Gui, Show,, HostsX
 Gui +LastFound
 hGui := WinExist()
@@ -428,27 +473,32 @@ Gui,99:+owner1  ; Make the main window (Gui #1) the owner of the "about box" (Gu
 Gui +Disabled  ; Disable main window.
 Gui,99:Destroy
 Gui,99:Margin,15,15
+SetGUIFont(99)
 Gui,99:Add,Picture,xm, orzTech.com.png
 Gui,99:Font,Bold
 Gui,99:Add,Text,xm y+20,%applicationname% %applicationversion%
 Gui,99:Font
+SetGUIFont(99)
 Gui,99:Add,Text,x25 y+10,%applicationfunction%
 Gui,99:Add,Text,x25 y+5,%applicationtip%
 
 Gui,99:Font,Bold
 Gui,99:Add,Text,xm y+20,by Yeechan Lu && Jock Kwok of 囧科技 | orzTech
 Gui,99:Font
+SetGUIFont(99)
 Gui,99:Font,CBlue Underline
 Gui,99:Add,Text,x25 y+5 gorzTech,http://orztech.com/
 Gui,99:Font
+SetGUIFont(99)
 Gui,99:Font,Bold
 Gui,99:Add,Text,xm y+20,囧科技技术支持
 Gui,99:Font
+SetGUIFont(99)
 Gui,99:Font,CBlue Underline
 Gui,99:Add,Text,x25 y+5 gorzTechSupport,http://orztech.com/support
 Gui,99:Add,Text,x25 y+5 gorzTechSupportMail,support@orztech.com
 Gui,99:Font
-
+SetGUIFont(99)
 Gui,99:Show,,关于 %applicationname% %applicationversion%
 hCurs:=DllCall("LoadCursor","UInt",NULL,"Int",32649,"UInt") ;IDC_HAND
  OnMessage(0x200,"WM_MOUSEMOVE")
@@ -1334,6 +1384,7 @@ ManageHostsBackups:
 Gui, 3:+owner1  ; Make the main window (Gui #1) the owner of the "about box" (Gui #2).
 Gui +Disabled  ; Disable main window.
 Gui, 3:Margin, 5, 5
+SetGUIFont(3)
 Gui, 3:Add, ListBox, vFileBox g3FileBox Sort Multi 0x100 R20 W500 section
 Gui, 3:Add, Button, vButtonRename g3ButtonRename Disabled ys, 重命名(&R)
 Gui, 3:Add, Button, vButtonDelete g3ButtonDelete Disabled wp, 删除(&D)
@@ -2623,7 +2674,7 @@ IniRead, UpdateWhenMissing, %setting%, orzTech/HostsX, UpdateWhenMissing
 IniRead, CheckWhitelistSilentMode, %setting%, orzTech/HostsX, CheckWhitelistSilentMode
 IniRead, CheckWhitelistAfterOpen, %setting%, orzTech/HostsX, CheckWhitelistAfterOpen
 If Font=ERROR
-	Font=Fixedsys
+	Font=
 If FontStyle=ERROR
 	FontStyle=s12
 If FontColor=ERROR
@@ -3035,8 +3086,19 @@ CopyMenu:
 Clipboard:= A_ThisMenuItem
 return
 
-F12::
-ControlGet, MainEditCurrentLine, CurrentLine,, %MainEdit%, A
-ControlGet, MainEditCurrentCol, CurrentCol,, %MainEdit%, A
-SB_SetText("Ln " MainEditCurrentLine ", Col " MainEditCurrentCol, 1)
-return
+SetGUIFont(id)
+{
+    gui, %id%:font,, MS sans serif
+    gui, %id%:font,, Arial
+    gui, %id%:font,, Verdana
+    gui, %id%:font,, Tahoma
+    gui, %id%:font,, Segoe UI
+    gui, %id%:font,, VL Gothic
+}
+
+UpdateStatusBar(wParam, lParam)
+{
+    ControlGet, MainEditCurrentLine, CurrentLine,, edit1, A
+    ControlGet, MainEditCurrentCol, CurrentCol,, edit1, A
+    SB_SetText("Ln " MainEditCurrentLine ", Col " MainEditCurrentCol, 1)
+}
