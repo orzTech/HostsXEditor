@@ -158,9 +158,10 @@ Menu, EditMenu, Add, 粘贴(&P)`tCtrl+V, EditPaste
 Menu, EditMenu, Add, 删除(&D)`tDelete, EditDelete
 Menu, EditMenu, Add, 删除全部(&E), EditDeleteAll
 Menu, EditMenu, Add
-Menu, EditMenu, Add, 查找(&F)`tCtrl+F, EditFind
+Menu, EditMenu, Add, 查找(&F)...`tCtrl+F, EditFind
 Menu, EditMenu, Add, 查找下一处(&N)`tF3, EditFindNext
-Menu, EditMenu, Add, 替换(&R)`tCtrl+H, EditReplace
+Menu, EditMenu, Add, 替换(&R)...`tCtrl+H, EditReplace
+Menu, EditMenu, Add, 转到(&G)...`tCtrl+G, EditGoto
 Menu, EditMenu, Add
 Menu, EditMenu, Add, 全选(&A)`tCtrl+A, EditSelectAll
 
@@ -193,8 +194,8 @@ Menu, ToolsMenu, Add
 Menu, ToolsMenu, Add, 给 Hosts 文件加锁(&L)`tF5, ToolsLockHosts
 Menu, ToolsMenu, Add, 给 Hosts 文件解锁(&U)`tF6, ToolsUnlockHosts
 Menu, ToolsMenu, Add
-Menu, ToolsMenu, Add, 执行 Ping 操作(&P), ToolsPing
-Menu, ToolsMenu, Add, 执行 NSLookup 操作(&N), ToolsNSLookup
+Menu, ToolsMenu, Add, 执行 Ping 操作(&P)..., ToolsPing
+Menu, ToolsMenu, Add, 执行 NSLookup 操作(&N)..., ToolsNSLookup
 Gosub BuildUpdateMenu
 
 Gosub BuildADPMenu
@@ -206,7 +207,7 @@ Menu, HelpMenu, Add
 Menu, HelpMenu, Add, 囧科技(&O), orzTech
 Menu, HelpMenu, Add, 囧科技技术支持系统(&S), orzTechSupport
 Menu, HelpMenu, Add
-Menu, HelpMenu, Add, 关于 HostsX(&A), HelpAbout
+Menu, HelpMenu, Add, 关于 HostsX(&A)..., HelpAbout
 	
 Menu, OptionsMenu, Add, 根据 HostsX 白名单除错时使用静默模式(&S), OptionsCheckWhitelistSilentMode
 If (CheckWhitelistSilentMode = "orzYes")
@@ -893,6 +894,34 @@ Return
 EditPaste:
 GuiControl, Focus, MainEdit
 Send ^V
+Return
+
+^G::
+EditGoto:
+ControlGet, MainEditCurrentLine, CurrentLine,, edit1
+ControlGet, MainEditLineCount, LineCount,, edit1
+Gui +OwnDialogs
+InputBox, JumpToLine, 转到指定行, 行号(&L): 1 〜 %MainEditLineCount%, , , , , , , , %MainEditCurrentLine%
+if (JumpToLine > 0 && JumpToLine <= MainEditLineCount)
+{
+    JumpToLine:= JumpToLine - 1
+
+    SendMessage, 0x00BB, %JumpToLine%, 0, edit1
+    if (ErrorLevel != 0xFFFFFFFF)
+    {
+        SendMessage, 0x00B1, %ErrorLevel%, %ErrorLevel%, edit1
+        SendMessage, 0x00B7, 0, 0, edit1
+    }
+    /*
+      result = SendMessageW(hwndEdit, EM_LINEINDEX, a1 - 1, 0);
+      if ( result != -1 )
+      {
+        SendMessageW(hwndEdit, EM_SETSEL, result, result);
+        result = SendMessageW(hwndEdit, EM_SCROLLCARET, 0, 0);
+      }
+      return result;
+    */
+}
 Return
 
 EditDelete:
