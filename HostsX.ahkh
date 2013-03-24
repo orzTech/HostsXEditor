@@ -3,6 +3,7 @@
 #Persistent
 #SingleInstance off
 #Include inc/Dlg.ahkh
+#Include inc/HTTPRequest.ahkh
 
 If 1=/admin
 {
@@ -201,11 +202,13 @@ Gosub BuildUpdateMenu
 Gosub BuildADPMenu
 
 Menu, HelpMenu, Add, HostsX 帮助(&H), orzTechHelpPage
-Menu, HelpMenu, Add, HostsX 发布页面(&P), orzTechPubPage
-Menu, HelpMenu, Add, HostsX 鸣谢列表(&A), orzTechAcknowledgementsPage
+Menu, HelpMenu, Add, HostsX 产品主页(&P), orzTechPubPage
+Menu, HelpMenu, Add, HostsX 数据发布点(&R), orzTechDataRepo
 Menu, HelpMenu, Add
-Menu, HelpMenu, Add, 囧科技(&O), orzTech
-Menu, HelpMenu, Add, 囧科技技术支持系统(&S), orzTechSupport
+Menu, HelpMenu, Add, 发送反馈(&S)..., SendFeedback
+Menu, HelpMenu, Add
+Menu, HelpMenu, Add, 囧科技官方网站(&O), orzTech
+Menu, HelpMenu, Add, 「必须的」网络隧道加速器(&V), VPNST
 Menu, HelpMenu, Add
 Menu, HelpMenu, Add, 关于 HostsX(&A)..., HelpAbout
 	
@@ -515,9 +518,17 @@ orzTechPubPage:
   Run, http://orztech.com/softwares/hostsx
 Return
 
+orzTechDataRepo:
+  Run, https://github.com/orzTech/HostsX
+return
+
 orzTech:
   Run,http://orztech.com/
 Return
+
+VPNST:
+  Run, http://vpnst.com/3.html
+return
 
 orzTechSupport:
   Run,http://orztech.com/support
@@ -2703,6 +2714,8 @@ IniRead, UpdateAtStartup, %setting%, orzTech/HostsX, UpdateAtStartup
 IniRead, UpdateWhenMissing, %setting%, orzTech/HostsX, UpdateWhenMissing
 IniRead, CheckWhitelistSilentMode, %setting%, orzTech/HostsX, CheckWhitelistSilentMode
 IniRead, CheckWhitelistAfterOpen, %setting%, orzTech/HostsX, CheckWhitelistAfterOpen
+IniRead, FeedbackName, %setting%, orzTech/HostsX, FeedbackName
+IniRead, FeedbackEmail, %setting%, orzTech/HostsX, FeedbackEmail
 If Font=ERROR
 	Font=
 If FontStyle=ERROR
@@ -2716,7 +2729,11 @@ If UpdateWhenMissing=ERROR
 If CheckWhitelistSilentMode=ERROR
 	CheckWhitelistSilentMode=orzNo
 If CheckWhitelistAfterOpen=ERROR
-	CheckWhitelistAfterOpen=orzYes
+	CheckWhitelistAfterOpen=orzNo
+If FeedbackEmail=ERROR
+    FeedbackEmail=
+If FeedbackName=ERROR
+    FeedbackName=
 Return
 
 SaveSettings:
@@ -2727,6 +2744,8 @@ IniWrite, %UpdateAtStartup%, %setting%, orzTech/HostsX, UpdateAtStartup
 IniWrite, %UpdateWhenMissing%, %setting%, orzTech/HostsX, UpdateWhenMissing
 IniWrite, %CheckWhitelistSilentMode%, %setting%, orzTech/HostsX, CheckWhitelistSilentMode
 IniWrite, %CheckWhitelistAfterOpen%, %setting%, orzTech/HostsX, CheckWhitelistAfterOpen
+IniWrite, %FeedbackName%, %setting%, orzTech/HostsX, FeedbackName
+IniWrite, %FeedbackEmail%, %setting%, orzTech/HostsX, FeedbackEmail
 Return
 
 InsertContent:
@@ -2997,7 +3016,7 @@ fo:
         IfNotExist,%ConfigPath%\servers.txt
         {
             LogStatus("无法从任何地方获取更新点列表，已加载内置镜像列表。")
-            updateList=https://github.com/orzTech/HostsX/raw/master/`nhttp://hostsx.rp2.jybox.net/`nhttp://hostsx.moe9th.org/repo/`nhttp://cdn.9bu.org/orztech_hostsxdata/
+            updateList=https://github.com/orzTech/HostsX/raw/master/`nhttp://hostsx.rp2.jybox.net/`nhttp://hostsx.moe9th.org/repo/
         }
         IfExist,%ConfigPath%\servers.txt
         {
@@ -3135,4 +3154,328 @@ UpdateStatusBar(wParam, lParam)
         ControlGet, MainEditCurrentCol, CurrentCol,, edit1, A
         SB_SetText("Ln " MainEditCurrentLine ", Col " MainEditCurrentCol, 1)
     }
+}
+FeedbackSectionsCallout(m)
+{
+    global FeedbackSections
+    FeedbackSections.Insert(m1)
+    return 1
+}
+SendFeedback()
+{
+    global FeedbackBody, FeedbackSystemInformation, FeedbackHosts, FeedbackName, FeedbackEmail, MainEdit, StatusLog, FeedbackSections
+    global applicationversion, Commentversion, commentwhitelistversion, Commentsourceversion
+    
+    ClipboardStatusLog=
+    for index, element in StatusLog
+    {
+	    ClipboardStatusLog=%ClipboardStatusLog%%element%`n
+    }    
+    
+    GuiControlGet, MainEdit
+    HostsContents:= MainEdit
+    
+    FeedbackSections := Object()
+    RegExMatch(MainEdit, "im)(*ANYCRLF)^#B#HostsX: (.*)$(?CFeedbackSectionsCallout)")
+    for index, element in FeedbackSections
+    {
+        SectionName:=element
+        SectionBeginLine=#B#HostsX: %SectionName%
+        SectionEndLine=#E#HostsX: %SectionName%
+        SectionBegin:=RegExMatch(HostsContents, "im)(*ANYCRLF)^" . SectionBeginLine . "$")
+        SectionEnd:=RegExMatch(HostsContents, "im)(*ANYCRLF)^" . SectionEndLine . "$")
+        HostsContentsBefore:=SubStr(HostsContents, 1, SectionBegin - 1)
+        HostsContentsAfter:=SubStr(HostsContents, SectionEnd + StrLen(SectionEndLine))
+        HostsContents=%HostsContentsBefore%%HostsContentsAfter%
+    }
+    
+    ClipboardFeedbackSections=
+    for index, element in FeedbackSections
+    {
+	    ClipboardFeedbackSections=%ClipboardFeedbackSections%* %element%`n
+    }
+
+    StringReplace, HostsContents, HostsContents, `r, `n, All
+    HostsContents:=RegExReplace(HostsContents, "^`n", "")
+    HostsContents:=RegExReplace(HostsContents, "`n$", "")
+    HostsContents:=RegExReplace(HostsContents, "`n+", "`n")
+    HostsContents:=RegExReplace(HostsContents, "im)(*ANYCRLF)^[^0-9a-f.:].*$", "")
+    HostsContents:=RegExReplace(HostsContents, "im)(*ANYCRLF)#.*$", "`n")
+    HostsContents:=RegExReplace(HostsContents, "im)(*ANYCRLF);.*$", "`n")
+    HostsContents:=RegExReplace(HostsContents, "`n+", "`n")
+    StringReplace, HostsContents, HostsContents, `n, `r`n, All
+    HostsContents:= RegExReplace(HostsContents, "127\.0\.0\.1", "-")
+    HostsContents:= RegExReplace(HostsContents, "0\.0\.0\.0", "+")
+    HostsContents:= RegExReplace(HostsContents, "( |\t)+", " ")
+    
+    OuterIP := RegExReplace(RegExReplace(RegExReplace(WCom("http://www.ip.cn/getip.php?action=getip&ip_url=&from=web"), "i)<[^>]*?>|&nbsp;|来自：", ""), "i).*[^0123456789](\d{1,3}\.\d{1,3}\.\d{1,3}\.)\d{1,3}", "OuterIP: $1*, IPLocation: "), "GeoIP", ", GeoIP")
+    InnerIP = InnerIP1: %A_IPAddress1%, InnerIP2: %A_IPAddress2%, InnerIP3: %A_IPAddress3%, InnerIP4: %A_IPAddress4%
+    InnerIP := RegExReplace(InnerIP, "(\d{1,3}\.\d{1,3}\.\d{1,3}\.)\d{1,3}", "$1*")
+    FeedbackBody = 
+    ( LTrim
+    问题描述
+    ========
+    （请尽量清楚的描述您遇到的问题，或者是您的建议。）
+    )
+    FeedbackBodyDeafult := FeedbackBody
+    
+    FeedbackSystemInformation=
+    ( LTrim
+    系统信息
+    ========
+    ``````
+    Now: %A_Now%, NowUTC: %A_NowUTC%
+    OSType: %A_OSType%, OSVersion: %A_OSVersion%, Is64bitOS: %A_Is64bitOS%, Language: %A_Language%
+    %OuterIP%
+    %InnerIP%
+    ``````
+    
+    日志
+    ====
+    ``````
+    %ClipboardStatusLog%
+    ``````
+    )
+    
+    FeedbackHosts=
+    ( LTrim
+    自定义的 Hosts 规则
+    =====================
+    ``````
+    %HostsContents%
+    ``````
+    
+    HostsX 数据版本
+    ===============
+    * HostsX.exe: ``%applicationversion%``
+    * HostsX.orzHosts: ``%Commentversion%``
+    * HostsXWhitelist.orzHosts: ``%commentwhitelistversion%``
+    * HostsX.orzSource: ``%Commentsourceversion%``
+    
+    订阅的 Hosts 规则
+    =================
+    %ClipboardFeedbackSections%
+    )
+    
+    Gui,4:+owner1
+    Gui +Disabled
+    Gui,4:Destroy
+    Gui,4:Margin,15,15
+    SetGUIFont(4)
+    Gui,4:Add, Text, W312, 您的邮箱地址或者 QQ 号
+    Gui,4:Add, Text, W313 xp+327, 您的昵称
+    Gui,4:Add, Edit, vFeedbackEmail W312 xs, %FeedbackEmail%
+    Gui,4:Add, Edit, vFeedbackName W313 xp+327, %FeedbackName%
+    Gui,4:Add, Edit, WantReturn Wrap Multi vFeedbackBody W640 R15 xs
+    Gui,4:Add, Edit, WantReturn -Wrap HSCROLL Multi vFeedbackSystemInformation W312 R10
+    Gui,4:Add, Edit, WantReturn -Wrap HSCROLL Multi vFeedbackHosts W313 R10 xp+327 yp
+    Gui,4:Add, Button, W640 g4GuiButtonSend xs, 发送反馈
+    
+    Gui,4:Show,,发送反馈
+    
+    GuiControl, 4:Text, FeedbackBody, %FeedbackBody%
+    GuiControl, 4:Text, FeedbackSystemInformation, %FeedbackSystemInformation%
+    GuiControl, 4:Text, FeedbackHosts, %FeedbackHosts%
+    WinWaitClose
+    return
+    
+4GuiButtonSend:
+    GuiControlGet, FeedbackName
+    GuiControlGet, FeedbackEmail
+    GuiControlGet, FeedbackBody
+    GuiControlGet, FeedbackSystemInformation
+    GuiControlGet, FeedbackHosts
+    If (RegExReplace(FeedbackEmail, "[0-9]", "") == "" && StrLen(FeedbackEmail) >= 5)
+    {
+        FeedbackEmail:= FeedbackEmail "@qq.com"
+        GuiControl, Text, FeedbackEmail, %FeedbackEmail%
+    }
+    If (StrLen(Trim(FeedbackName)) == 0)
+    {
+        FeedbackName := FeedbackEmail
+        GuiControl, Text, FeedbackName, %FeedbackName%
+    }
+    Gosub SaveSettings
+    If (FeedbackBodyDeafult == FeedbackBody)
+    {
+        Gui +OwnDialogs
+        MsgBox, 16, , 请输入反馈内容。
+        Return
+    }
+    If (!isValidEmail(FeedbackEmail))
+    {
+        Gui +OwnDialogs
+        MsgBox, 16, , 邮箱地址无效。
+        Return
+    }
+    FeedbackContent = 
+    (LTrim
+    %FeedbackBody%
+    
+    %FeedbackSystemInformation%
+    
+    %FeedbackHosts%
+    )
+    RequestBody:= "element_1=" URLEncode(FeedbackContent) "&element_2=" URLEncode(FeedbackName) "&element_3=" URLEncode(FeedbackEmail) "&form_id=3&submit=Submit"
+    Gui 4:+Disabled
+    if (HTTPRequest( "http://api.orztech.com/forms/3", RequestBody, "", "Content-Type: application/x-www-form-urlencoded`nContent-Length: " (Strlen(RequestBody)*2) "`nCharset: utf-8`nCallback: HTTPRequestProgress"))
+    {
+        Progress, OFF
+        if (Instr(RequestBody, "top.location"))
+        {
+            Gui +OwnDialogs
+            MsgBox, 64, , 提交成功，邮件已抄送至您的邮箱。我们将尽快与您取得联系。
+            Gosub 4GuiEscape
+            return
+        }
+    }
+    Gui 4:-Disabled
+    Progress, OFF
+    Gui +OwnDialogs
+    MsgBox, 16, , 提交失败，请尝试登录 http://api.orztech.com/forms/3 手动提交。
+    Return
+    
+4GuiClose:
+4GuiEscape:
+    Gui, 1:-Disabled
+    Gui Destroy
+    return
+}
+
+HTTPRequestProgress( pct, total ) {
+If ( pct = "" )
+	Progress, OFF
+Else If ( pct < 0 )
+	Progress, % Round( 100 * ( pct + 1 ), 1 ), % Round( ( pct + 1 ) * total, 0 ) " of " total " bytes.", 正在发送数据
+Else If ( 0 <= pct )
+    Progress, % Round( 100 * ( pct ), 1 ), % Round( ( pct ) * total, 0 ) " of " total " bytes.", 正在接收数据
+}
+
+SendFeedback:
+SendFeedback()
+return
+
+
+; http://www.autohotkey.com/board/topic/43335-email-validity-check-isvalidemail-function/
+isValidEmail(emailstr) 
+{ 
+  ; Get length 
+  emailstr_len := StrLen(emailstr)
+  ; Remove whitespace (AutoTrim) 
+  emailstr = %emailstr% 
+  ; Make lowercase 
+  StringLower, emailstr, emailstr 
+  ; Split it up into before and after the @ symbol 
+  StringGetPos, atPos, emailstr, @, R 
+  If ErrorLevel 
+    Return false ; no @ 
+  StringLeft, local_part, emailstr, %atPos% 
+  StringRight, domain_part, emailstr, % emailstr_len - atPos - 1 
+  ; Sanitize quoted parts  
+  local_part := RegExReplace(local_part, "\\\.", "_") 
+  local_part := RegExReplace(local_part, """[^""]+""", ".") 
+  ; Comments ( this is a comment ) are permitted in domain parts 
+  domain_part := RegExReplace(domain_part, "\([^()]*\)", "") 
+  ; Make sure there are no more @ (we sanitized valid ones above) 
+  If InStr(local_part, "@") 
+    Return false ; too many @ 
+  ; Check that the username is >= 1 char 
+  If StrLen(local_part) = 0 
+    Return false ; username missing 
+  ; Split the domain part into the dotted parts 
+  StringSplit, domain_components, domain_part, `. 
+  ; Check there are at least 2 
+  If domain_components0 < 2 
+    Return false ; not enough domain components
+  ; Check each domain part to ensure it doesn't start or end with a bad char 
+  Loop %domain_components0% 
+  { 
+    domain_component := domain_components%A_Index% 
+    If (StrLen(domain_component) > 0) 
+    { 
+      StringLeft, firstChar, domain_component, 1 
+      StringRight, lastChar, domain_component, 1 
+      If RegExMatch(firstChar, "[\.-]") Or RegExMatch(lastChar, "[\.-]") 
+        Return false ; wrong start/end character in domain component
+    } 
+    Else 
+      Return false ; domain component missing 
+  } 
+  ; Check the last domain component has 2-6 chars (.uk to .museum) 
+  domain_last := domain_components%domain_components0% 
+  If (StrLen(domain_last) < 2) Or If (StrLen(domain_last) > 6) 
+    Return false ; TLD too large or small
+  ; Check for valid chars - Domains can only have A-Z, 0-9, ., and the - chars, 
+  ; or be in the form [123.123.123.123]
+  If RegExMatch(domain_part, "^\[(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\]$") 
+  { 
+    If ip2long(domain_part) != 0 
+      Return true ; ip 
+    Else 
+      Return false ; ip error 
+  } 
+  If RegExMatch(domain_part, "^[a-z0-9\.-]+$") 
+    Return true ; domain
+  ; If we get here then it didn't pass 
+  Return false ; end of function
+} 
+
+ip2long(ip) 
+{  ; http://www.cflib.org/udf/ip2long 
+  ip := RegExReplace(ip, "\[|\]", "") ; remove xtra chars 
+  StringSplit, iparr, ip, `. 
+  If (iparr0 != 4) 
+    Return False 
+  If (iparr1 > 255 Or iparr2 > 255 Or iparr3 > 255 Or iparr4 > 255) 
+    Return False 
+  Else 
+    Return (iparr1*256^3) + (iparr2*256^2) + (iparr3*256) + iparr4 
+}
+
+
+URLEncode(str, encoding="UTF-8", except="!#$&'()*+,-./:;=?@_~") {
+		len := StrLen(str)
+		result := ""
+		i := 1
+		oldFmt := A_FormatInteger
+		SetFormat, Integer, hex
+		While (i <= len) {
+				char := SubStr(str, i, 1) ; 한문자씩 파싱
+				result .= IsNonEncodedCharacter(char, except) ? char : ToPercentHexFormat(char, encoding)
+				i++
+		}
+		SetFormat, Integer, %oldFmt%
+		return result
+}
+
+IsNonEncodedCharacter(char, except) {
+		ascii := Asc(char)
+		return ascii >= 0x41 && ascii <= 0x5A ; A-Z
+						|| ascii >= 0x61 && ascii <= 0x7A ; a-z
+						|| ascii >= 0x30 && ascii <= 0x39 ; 0-9
+						|| InStr(except, char, true)
+}
+ToPercentHexFormat(str, encoding) {
+		byteCnts := StrPutVar(str, encoded, encoding) - 1
+		result := ""
+		i := 0
+		While (i < byteCnts) {
+				byte := NumGet(encoded, i, "UChar")
+				hex := StrUpper(SubStr(byte, 3)) ; "0x" 제거
+				If (StrLen(hex) == 1)
+						hex := "0" . hex
+				result .= "%" . hex
+				i++
+		}
+		return result
+}
+
+StrUpper(str) {
+		StringUpper, out, str
+		return out
+}
+
+StrPutVar(str, ByRef var, encoding) {
+		VarSetCapacity(var, StrPut(str, encoding) * ((encoding == "utf-16" || encoding == "cp1200") ? 2 : 1))
+		return StrPut(str, &var, encoding)
 }
