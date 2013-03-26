@@ -1114,11 +1114,10 @@ _ADPUpdate=1
 ADPSetup:
 EnvGet, Temp, Temp
 Random, rand, 10000, 99999
-LogStatus("正在从 http://9bu.org/3c 下载 Acrylic DNS Proxy。")
-UrlDownloadToFile,http://9bu.org/3c, %temp%\HostsX%rand%.exe
+LogStatus("正在下载 Acrylic DNS Proxy……")
+HTTPRequestDownloadToFile("下载 Acrylic DNS Proxy：", "http://9bu.org/3c", temp "\HostsX" rand ".exe")
 LogStatus("下载完毕。")
 RunWait, %temp%\HostsX%rand%.exe,,UseErrorLevel
-FileDelete, %temp%\HostsX%rand%.exe
 Gosub BuildADPMenu
 If _ADPUpdate=1
 {
@@ -3053,7 +3052,7 @@ fo2:
 
 FetchHostsXRepo(filename, description)
 {
-    global ConfigPath
+    global ConfigPath, HTTPRequestStatusBarPrefix
     
     FetchUpdateList()
     FileRead, updateList, %ConfigPath%\servers.txt
@@ -3067,12 +3066,9 @@ FetchHostsXRepo(filename, description)
     Loop, parse, updateList, `n, `r  ; Specifying `n prior to `r allows both Windows and Unix files to be parsed.
     {
     	updateListIndex+=1
-        LogStatus("更新 " description "：正在下载 " A_LoopField "" filename "。")
-        FileContents := WCom(A_LoopField "" filename)
-        IfExist, %ConfigPath%\%filename%
-            FileDelete, %ConfigPath%\%filename%
-        FileAppend, %FileContents%, %ConfigPath%\%filename%
-    	If ErrorLevel
+        LogStatus("更新 " description "：正在连接 " A_LoopField "" filename "。")
+        HTTPRequestDownloadToFile("更新 " description "：", A_LoopField "" filename, ConfigPath "\" filename)
+    	If(ErrorLevel == 0)
     	{
             LogStatus("更新 " description "：无法下载。将尝试下个更新点。")
     	}
@@ -3087,17 +3083,21 @@ FetchHostsXRepo(filename, description)
     return
 }
 
-LogStatus(Message) {
+LogStatus(Message, Log2=1) {
     global StatusLog
     
     FormatTime, TimeStamp, , yyyy-MM-dd HH:mm:ss
     Log := "[" TimeStamp "] " Message
     
     SB_SetText(Log, 2, 1)
-    StatusLog.Insert(Log)
-    if ((StatusLog.MaxIndex() - StatusLog.MinIndex()) > 19)
+    
+    If(Log2 == "1")
     {
-        StatusLog.Remove(StatusLog.MinIndex())
+        StatusLog.Insert(Log)
+        if ((StatusLog.MaxIndex() - StatusLog.MinIndex()) > 99)
+        {
+            StatusLog.Remove(StatusLog.MinIndex())
+        }
     }
 }
 
@@ -3361,13 +3361,37 @@ Return W.ResponseText,W.quit
 }
 
 
+HTTPRequestDownloadToFile(status, url, fname) {
+    global HTTPRequestStatusBarPrefix
+    HTTPRequestStatusBarPrefix := status
+    
+    ifExist, fname
+        FileDelete, fname
+
+    HTTPRequest( url, "", b, "Charset: utf-8`nBinary`nCallback: HTTPRequestStatusBarProgress`nSaveAs: " fname)
+    aErrorLevel := ErrorLevel
+    SB_SetProgress(0, 1, "+Smooth Hide")
+    LogStatus(HTTPRequestStatusBarPrefix "完成。")
+    ErrorLevel := aErrorLevel
+}
+
 HTTPRequestStatusBarProgress( pct, total ) {
-If ( pct = "" )
-	SB_SetProgress(0, 1, "+Smooth Hide")
-Else If ( pct < 0 )
-	SB_SetProgress(Round( 100 * ( pct + 1 ), 1 ), 1, "+Smooth Show")
-Else If ( 0 <= pct )
-    SB_SetProgress(Round( 100 * ( pct ), 1 ), 1, "+Smooth Show")
+    global HTTPRequestStatusBarPrefix
+    If ( pct = "" )
+    {
+    	SB_SetProgress(0, 1, "+Smooth Hide")
+    }
+    Else If ( pct < 0 )
+    {
+        LogStatus(HTTPRequestStatusBarPrefix "正在发送数据：" Round( ( pct ) * total, 0 ) " / " total " 字节", False)
+    	SB_SetProgress(Round( 100 * ( pct + 1 ), 1 ), 1, "+Smooth Show")
+    }
+    Else If ( 0 <= pct )
+    {
+        LogStatus(HTTPRequestStatusBarPrefix "正在接收数据：" Round( ( pct ) * total, 0 ) " / " total " 字节", False)
+        SB_SetProgress(Round( 100 * ( pct ), 1 ), 1, "+Smooth Show")
+    }
+    return -1
 }
 
 
