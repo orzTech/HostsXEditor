@@ -1676,8 +1676,8 @@ Loop, %SourceIndex%
 			Gui, 1:+Disabled
 			EnvGet, Temp, Temp
 			Random, rand, 10000, 99999
-			UrlDownloadToFile,%myurl%, %temp%\HostsX%rand%.orz
-			If ErrorLevel
+            HTTPRequestDownloadToFile("下载“" myname "”：", myurl, temp "\HostsX" rand ".orz")
+			If (ErrorLevel == 0)
 			{
 				FileDelete, %temp%\HostsX%rand%.orz
 				TrayTip,
@@ -2070,8 +2070,8 @@ Loop, %SourceIndex%
 		Gui, 1:+Disabled
 		EnvGet, Temp, Temp
 		Random, rand, 10000, 99999
-		UrlDownloadToFile,%myurl%, %temp%\HostsX%rand%.orz
-		If ErrorLevel
+		HTTPRequestDownloadToFile("下载“" myname "”：", myurl, temp "\HostsX" rand ".orz")
+		If (ErrorLevel == 0)
 		{
 			FileDelete, %temp%\HostsX%rand%.orz
 		}
