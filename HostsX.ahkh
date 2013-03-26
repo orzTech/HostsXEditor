@@ -225,6 +225,7 @@ Menu, MyMenuBar, Add, 文件(&F), :FileMenu
 Menu, MyMenuBar, Add, 编辑(&E), :EditMenu
 Menu, MyMenuBar, Add, 格式(&O), :FormatMenu
 Menu, MyMenuBar, Add, 插入(&I), :InsertMenu
+Menu, MyMenuBar, Add, HostX(&X), :InsertMenuItems
 Menu, MyMenuBar, Add, 工具(&T), :ToolsMenu
 Menu, MyMenuBar, Add, 备份(&B), :BackupMenu
 Menu, MyMenuBar, Add, 更新(&U), :UpdateMenu
@@ -960,7 +961,6 @@ Menu, InsertMenu, DeleteAll
 Menu, InsertMenu, Add, 域名解析数据(&L), InsertLookupIPLocal
 Menu, InsertMenu, Add, localhost 本地解析数据(&O), InsertLocalhost
 Menu, InsertMenu, Add
-Menu, InsertMenu, Add, HostsX 广告屏蔽数据(&X), :InsertMenuItems
 SourceIndex=0
 Loop, Read, %ConfigPath%\HostsX.orzsource
 {
@@ -984,7 +984,7 @@ Loop, Read, %ConfigPath%\HostsX.orzsource
 			if InStr(A_LoopReadLine, "*")
 			{
 				StringSplit, SourceItem, A_LoopReadLine, *
-				source%SourceIndex%Caption=%SourceItem1%
+				source%SourceIndex%Caption=%SourceItem1%`tURL
 				source%SourceIndex%URL=%SourceItem2%
 				source%SourceIndex%Action=ShellExecute
 				sc:=source%SourceIndex%Caption
