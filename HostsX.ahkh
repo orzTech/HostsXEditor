@@ -220,6 +220,14 @@ Menu, OptionsMenu, Add, 打开文件后自动根据 HostsX 白名单除错(&O), 
 If (CheckWhitelistAfterOpen = "orzYes")
 	Menu, OptionsMenu, Check, 打开文件后自动根据 HostsX 白名单除错(&O)
 
+Menu, OptionsMenu, Add
+Menu, OptionsMenu, Add, 启动程序时自动更新数据文件(&S), OptionsUpdateAtStartup
+If (UpdateAtStartup = "orzYes")
+	Menu, OptionsMenu, Check, 启动程序时自动更新数据文件(&S)
+Menu, OptionsMenu, Add, 数据文件不存在时自动更新数据文件(&M), OptionsUpdateWhenMissing
+If (UpdateWhenMissing = "orzYes")
+	Menu, OptionsMenu, Check, 数据文件不存在时自动更新数据文件(&M)
+
 ; Create the menu bar by attaching the sub-menus to it:
 Menu, MyMenuBar, Add, 文件(&F), :FileMenu
 Menu, MyMenuBar, Add, 编辑(&E), :EditMenu
@@ -1240,32 +1248,19 @@ BuildUpdateMenu:
 Gui 1:Menu
 Menu, UpdateMenu, Add,
 Menu, UpdateMenu, DeleteAll
+If (applicationversion!=commenthostsxversion)
+{
+    Menu, UpdateMenu, Add, 下载 HostsX 最新版本(&H)...`t%commenthostsxversion%, orzTechPubPage
+    Menu, UpdateMenu, Default, 下载 HostsX 最新版本(&H)...`t%commenthostsxversion%
+    Menu, UpdateMenu, Add
+}
+Menu, UpdateMenu, Add, 更新下列所有数据(&A), UpdateAll
+Menu, UpdateMenu, Add
+Menu, UpdateMenu, Add, HostsX 数据`t%Commentversion%, UpdateHostsFile
+Menu, UpdateMenu, Add, 白名单及除错数据`t%commentwhitelistversion%, UpdateOtherHosts
+Menu, UpdateMenu, Add, 推荐数据列表`t%Commentsourceversion%, UpdateWhitelist
+Menu, UpdateMenu, Add
 Menu, UpdateMenu, Add, 一键更新 αlpha(&O), OneKeyUpdate
-Menu, UpdateMenu, Add
-Menu, UpdateMenu, Add, 启动程序时自动更新数据文件(&S), OptionsUpdateAtStartup
-If (UpdateAtStartup = "orzYes")
-	Menu, UpdateMenu, Check, 启动程序时自动更新数据文件(&S)
-Menu, UpdateMenu, Add, 数据文件不存在时自动更新数据文件(&M), OptionsUpdateWhenMissing
-If (UpdateWhenMissing = "orzYes")
-	Menu, UpdateMenu, Check, 数据文件不存在时自动更新数据文件(&M)
-Menu, UpdateMenu, Add
-Menu, UpdateMenu, Add, 更新以下所有数据(&A), UpdateAll
-Menu, UpdateMenu, Add
-Menu, UpdateMenu, Add, 更新 HostsX 广告屏蔽数据(&U), UpdateHostsFile
-Menu, UpdateMenu, Add, hosts 当前版本：%Commentversion%, UpdateHostsFile
-Menu, UpdateMenu, Disable, hosts 当前版本：%Commentversion%
-Menu, UpdateMenu, Add
-Menu, UpdateMenu, Add, 更新 HostsX 白名单及除错数据(&W), UpdateWhitelist
-Menu, UpdateMenu, Add, HostsXWhitelist.orzHosts 当前版本：%commentwhitelistversion%, UpdateHostsFile
-Menu, UpdateMenu, Disable, HostsXWhitelist.orzHosts 当前版本：%commentwhitelistversion%
-Menu, UpdateMenu, Add
-Menu, UpdateMenu, Add, 更新 HostsX 推荐数据列表(&P), UpdateOtherHosts
-Menu, UpdateMenu, Add, HostsX.orzSource 当前版本：%Commentsourceversion%, UpdateHostsFile
-Menu, UpdateMenu, Disable, HostsX.orzSource 当前版本：%Commentsourceversion%
-Menu, UpdateMenu, Add
-Menu, UpdateMenu, Add, 下载 HostsX 最新版本 %commenthostsxversion%(&H), orzTechPubPage
-Menu, UpdateMenu, Add, HostsX 当前版本：%applicationversion%, UpdateHostsFile
-Menu, UpdateMenu, Disable, HostsX 当前版本：%applicationversion%
 IfNotInstring, applicationversion, dev
 {
 	If (applicationversion!=commenthostsxversion)
@@ -2898,12 +2893,12 @@ OptionsUpdateAtStartup:
 If (UpdateAtStartup = "orzYes")
 {
 	UpdateAtStartup = orzNo
-	Menu, UpdateMenu, Uncheck, 启动程序时自动更新数据文件(&S)
+	Menu, OptionsMenu, Uncheck, 启动程序时自动更新数据文件(&S)
 }
 Else
 {
 	UpdateAtStartup = orzYes
-	Menu, UpdateMenu, Check, 启动程序时自动更新数据文件(&S)
+	Menu, OptionsMenu, Check, 启动程序时自动更新数据文件(&S)
 }
 Return
 
@@ -2911,12 +2906,12 @@ OptionsUpdateWhenMissing:
 If (UpdateWhenMissing = "orzYes")
 {
 	UpdateWhenMissing = orzNo
-	Menu, UpdateMenu, Uncheck, 数据文件不存在时自动更新数据文件(&M)
+	Menu, OptionsMenu, Uncheck, 数据文件不存在时自动更新数据文件(&M)
 }
 Else
 {
 	UpdateWhenMissing = orzYes
-	Menu, UpdateMenu, Check, 数据文件不存在时自动更新数据文件(&M)
+	Menu, OptionsMenu, Check, 数据文件不存在时自动更新数据文件(&M)
 }
 Return
 
