@@ -1295,9 +1295,9 @@ Else
 }
 Menu, ReplaceWithDefaultContents, Add
 Menu, ReplaceWithDefaultContents, DeleteAll
-Menu, ReplaceWithDefaultContents, Add, Windows 98`, Me`, NT`, 2000`, &XP`, 2003, HostsReplaceWith2000
-Menu, ReplaceWithDefaultContents, Add, Windows &Vista, HostsReplaceWithVista
-Menu, ReplaceWithDefaultContents, Add, Window&s 7, HostsReplaceWith7
+Menu, ReplaceWithDefaultContents, Add, Windows 98`, Me`, NT`, 2000`, &XP`, Server 2003, HostsReplaceWith2000
+Menu, ReplaceWithDefaultContents, Add, Windows &Vista`, Server 2005, HostsReplaceWithVista
+Menu, ReplaceWithDefaultContents, Add, Window&s 7`, Server 2008`, 8`, Server 2012, HostsReplaceWith7
 Menu, ReplaceWithDefaultContents, Add, &Acrylic DNS Proxy, HostsReplaceWithAcrylicHosts
 Menu, BackupMenu, Add, 还原编辑区为默认 Hosts 文件(&D), :ReplaceWithDefaultContents
 Menu, BackupMenu, Add, 
