@@ -127,7 +127,7 @@ FileInstall orzTech.com.png, %ConfigPath%\orzTech.com.png
 applicationname=HostsX
 applicationfunction=新一代记事本风格的 Hosts 文件编辑工具。
 applicationtip=
-applicationversion=0.6.0.0 dev
+applicationversion=0.6.1.7
 
 LogStatus(applicationname " " applicationversion " 已经启动。")
 
@@ -340,12 +340,12 @@ if (UpdateWhenMissing = "orzYes")
 		NeedUpdate = true
         gosub UpdateHostsFile
     }
-	IfNotExist,%ConfigPath%\HostsX.orzsource
+	IfNotExist,%ConfigPath%\sources.txt
     {
 		NeedUpdate = true
         gosub UpdateOtherHosts
     }
-	IfNotExist,%ConfigPath%\HostsXWhitelist.orzhosts
+	IfNotExist,%ConfigPath%\fixlist.txt
     {
 		NeedUpdate = true
         gosub UpdateWhitelist
@@ -970,7 +970,7 @@ Menu, InsertMenu, Add, 域名解析数据(&L), InsertLookupIPLocal
 Menu, InsertMenu, Add, localhost 本地解析数据(&O), InsertLocalhost
 Menu, InsertMenu, Add
 SourceIndex=0
-Loop, Read, %ConfigPath%\HostsX.orzsource
+Loop, Read, %ConfigPath%\sources.txt
 {
 	Length := StrLen(A_LoopReadLine)
 	if Length > 0
@@ -1257,8 +1257,8 @@ If (applicationversion!=commenthostsxversion)
 Menu, UpdateMenu, Add, 更新下列所有数据(&A), UpdateAll
 Menu, UpdateMenu, Add
 Menu, UpdateMenu, Add, HostsX 数据`t%Commentversion%, UpdateHostsFile
-Menu, UpdateMenu, Add, 白名单及除错数据`t%commentwhitelistversion%, UpdateOtherHosts
-Menu, UpdateMenu, Add, 推荐数据列表`t%Commentsourceversion%, UpdateWhitelist
+Menu, UpdateMenu, Add, 推荐数据列表`t%Commentsourceversion%, UpdateOtherHosts
+Menu, UpdateMenu, Add, 白名单及除错数据`t%commentwhitelistversion%, UpdateWhitelist
 Menu, UpdateMenu, Add
 Menu, UpdateMenu, Add, 一键更新 αlpha(&O), OneKeyUpdate
 IfNotInstring, applicationversion, dev
@@ -1767,14 +1767,14 @@ Return
 
 ParseWhitelist:
 WhitelistValid = false
-IfNotExist, %ConfigPath%\HostsXWhitelist.orzhosts
+IfNotExist, %ConfigPath%\fixlist.txt
 {
 	Return
 }
 WhitelistValid = true
 ArrayWhitelistCount = 0
 ArrayWhitelistFR = F
-Loop, Read, %ConfigPath%\HostsXWhitelist.orzhosts
+Loop, Read, %ConfigPath%\fixlist.txt
 {
 	Length := StrLen(A_LoopReadLine)
 	if Length > 1
@@ -2102,11 +2102,8 @@ LogStatus("一键更新执行成功，请检查更新结果。")
 Return
 
 UpdateWhitelist:
-FetchHostsXRepo("HostsXWhitelist.orzhosts", "HostsX 白名单及除错数据")
-If ErrorLevel
-{
-}
-Else
+FetchHostsXRepo("fixlist.txt", "HostsX 白名单及除错数据")
+If(ErrorLevel == 0)
 {
     Gosub ParseWhitelist
 	LogStatus("HostsX 白名单及除错数据更新完成, 最新版本号：" commentwhitelistversion "。请通过“工具”菜单进行白名单检查。")
@@ -2116,10 +2113,7 @@ return
 
 UpdateHostsFile:
 FetchHostsXRepo("hosts", "HostsX 数据")
-If ErrorLevel
-{
-}
-Else
+If(ErrorLevel == 0)
 {
 	GoSub BuildInsertMenu
 	LogStatus("HostsX 数据更新完成, 最新版本号：" Commentversion "。请通过“插入”菜单插入最新版本数据了。")
@@ -2136,11 +2130,8 @@ Return
 
 
 UpdateOtherHosts:
-FetchHostsXRepo("HostsX.orzsource", "HostsX 推荐数据列表")
-If ErrorLevel
-{
-}
-Else
+FetchHostsXRepo("sources.txt", "HostsX 推荐数据列表")
+If(ErrorLevel == 0)
 {
 	GoSub BuildInsertMenu
 	LogStatus("HostsX 推荐数据列表更新完成, 最新版本号：" Commentsourceversion "。请通过“插入”菜单插入最新版本数据了。")
@@ -2983,14 +2974,14 @@ FetchUpdateList(force = 0)
     FileGetTime, lastUpdated, %ConfigPath%\servers.txt
     diff := A_Now
     EnvSub, diff, %lastUpdated%, days
-    If (diff > 2)
+    If (diff > 1)
         Goto fo
         
     return
     
 fo:
     LogStatus("正在获取 orzTech.com 更新点列表。")
-    updateListOrigianl:=WCom("http://orztech.com/labs/HostsX.lh/autoupdate.txt")
+    updateListOrigianl:=WCom("http://api.orztech.com/hostsx/servers.txt")
     updateList=
     updateListCount = 0
     Loop, parse, updateListOrigianl, `n, `r
@@ -3006,7 +2997,7 @@ fo:
         IfNotExist,%ConfigPath%\servers.txt
         {
             LogStatus("无法从任何地方获取更新点列表，已加载内置镜像列表。")
-            updateList=https://github.com/orzTech/HostsX/raw/master/`nhttp://hostsx.rp2.jybox.net/`nhttp://hostsx.moe9th.org/repo/
+            updateList=https://github.com/orzTech/HostsX/raw/master/`nhttps://gitcafe.com/orzTech/HostsX/raw/master/`nhttp://hostsx.rp2.jybox.net/`nhttp://hostsx.moe9th.org/repo/
         }
         IfExist,%ConfigPath%\servers.txt
         {
@@ -3063,18 +3054,19 @@ FetchHostsXRepo(filename, description)
     	updateListIndex+=1
         LogStatus("更新 " description "：正在连接 " A_LoopField "" filename "。")
         HTTPRequestDownloadToFile("更新 " description "：", A_LoopField "" filename, ConfigPath "\" filename)
-    	If(ErrorLevel == 0)
+    	If(ErrorLevel < 200 || ErrorLevel >= 400)
     	{
             LogStatus("更新 " description "：无法下载。将尝试下个更新点。")
     	}
     	Else
     	{
             LogStatus("更新 " description "：成功。")
+            ErrorLevel := 0
             return
     	}
     }
     LogStatus("更新 " description "：无法连接任何更新点，请检查网络是否有问题并稍候重试。")
-    ErrorLevel = 1
+    ErrorLevel := 1
     return
 }
 
@@ -3243,8 +3235,8 @@ SendFeedback()
     ===============
     * HostsX.exe: ``%applicationversion%``
     * hosts: ``%Commentversion%``
-    * HostsXWhitelist.orzHosts: ``%commentwhitelistversion%``
-    * HostsX.orzSource: ``%Commentsourceversion%``
+    * fixlist.txt: ``%commentwhitelistversion%``
+    * sources.txt: ``%Commentsourceversion%``
     
     订阅的 Hosts 规则
     =================
@@ -3366,7 +3358,6 @@ HTTPRequestDownloadToFile(status, url, fname) {
     HTTPRequest( url, "", b, "Charset: utf-8`nBinary`nCallback: HTTPRequestStatusBarProgress`nSaveAs: " fname)
     aErrorLevel := ErrorLevel
     SB_SetProgress(0, 1, "+Smooth Hide")
-    LogStatus(HTTPRequestStatusBarPrefix "完成。")
     ErrorLevel := aErrorLevel
 }
 
