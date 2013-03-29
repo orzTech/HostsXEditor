@@ -1254,7 +1254,7 @@ BuildUpdateMenu:
 Gui 1:Menu
 Menu, UpdateMenu, Add,
 Menu, UpdateMenu, DeleteAll
-If (applicationversion!=commenthostsxversion)
+If (applicationversion!=commenthostsxversion && commenthostsxversion)
 {
     Menu, UpdateMenu, Add, 下载 HostsX 最新版本(&H)...`t%commenthostsxversion%, orzTechPubPage
     Menu, UpdateMenu, Default, 下载 HostsX 最新版本(&H)...`t%commenthostsxversion%
@@ -1269,7 +1269,7 @@ Menu, UpdateMenu, Add
 Menu, UpdateMenu, Add, 一键更新 αlpha(&O), OneKeyUpdate
 IfNotInstring, applicationversion, dev
 {
-	If (applicationversion!=commenthostsxversion)
+	If (applicationversion!=commenthostsxversion && commenthostsxversion)
 		TrayTip, HostsX 检测到新版本, orzTech | 囧科技已发布新版 HostsX。`r`n`r`n最新版本：%commenthostsxversion%`r`n当前版本：%applicationversion%`r`n`r`n请在“更新”菜单中下载。,,1
 }
 Gui, 1:Menu, MyMenuBar
