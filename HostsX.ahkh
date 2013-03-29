@@ -5,6 +5,7 @@
 #Include inc/Dlg.ahkh
 #Include inc/HTTPRequest.ahkh
 
+FileEncoding, CP936
 If 1=/admin
 {
 	PopularFile=%A_WinDir%\System32\drivers\etc\hosts
@@ -410,7 +411,9 @@ Gosub FileRead
 return
 
 FileRead:
+FileEncoding, 
 FileRead, MainEdit, %SelectedFileName%  ; Read the file's contents into the variable.
+FileEncoding, CP936
 if ErrorLevel
 {
 	Gui +OwnDialogs
@@ -455,7 +458,9 @@ SaveCurrentFile:
 GuiControlGet, MainEdit  ; Retrieve the contents of the Edit control.
 EnvGet, Temp, Temp
 Random, rand, 10000, 99999
+FileEncoding, 
 FileAppend, %MainEdit%, %temp%\HostsX%rand%.orz
+FileEncoding, CP936
 
 FileGetAttrib, Attributes, %CurrentFileName%
 IfInString, Attributes, R
