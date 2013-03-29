@@ -11,6 +11,7 @@ If 1=/admin
 	SystemHosts=%PopularFile%
 	ModuleName=%2%
 	Menu, Tray, NoStandard
+    Menu, Tray, NoIcon
 	if IsFunc("AdminModule" . ModuleName)
 	{
 		AdminModule%ModuleName%()
@@ -134,6 +135,11 @@ LogStatus(applicationname " " applicationversion " 已经启动。")
 Gosub ReloadSettings
 
 BuildMenu:
+If A_IsCompiled=1
+	Menu, Tray, Icon, %A_ScriptFullPath%
+Else
+    Menu, Tray, Icon, HostsX.ico
+   
 Menu, Tray, NoStandard
 Menu, Tray, Add, 关于 HostsX(&A), HelpAbout
 Menu, Tray, Add
