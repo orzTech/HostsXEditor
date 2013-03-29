@@ -162,7 +162,7 @@ Menu, EditMenu, Add
 Menu, EditMenu, Add, 剪切(&T)`tCtrl+X, EditCut
 Menu, EditMenu, Add, 复制(&C)`tCtrl+C, EditCopy
 Menu, EditMenu, Add, 粘贴(&P)`tCtrl+V, EditPaste
-Menu, EditMenu, Add, 删除(&D)`tDelete, EditDelete
+Menu, EditMenu, Add, 删除(&D)`tDelete` , EditDelete
 Menu, EditMenu, Add, 删除全部(&E), EditDeleteAll
 Menu, EditMenu, Add
 Menu, EditMenu, Add, 查找(&F)...`tCtrl+F, EditFind
