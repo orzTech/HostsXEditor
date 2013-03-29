@@ -129,7 +129,7 @@ FileInstall orzTech.com.png, %ConfigPath%\orzTech.com.png
 applicationname=HostsX
 applicationfunction=新一代记事本风格的 Hosts 文件编辑工具。
 applicationtip=
-applicationversion=0.6.1.7
+applicationversion=0.7.1.18
 
 LogStatus(applicationname " " applicationversion " 已经启动。")
 
@@ -218,7 +218,7 @@ Menu, HelpMenu, Add
 Menu, HelpMenu, Add, 囧科技官方网站(&O), orzTech
 Menu, HelpMenu, Add, 「必须的」网络隧道加速器(&V), VPNST
 Menu, HelpMenu, Add
-Menu, HelpMenu, Add, 关于 HostsX(&A)..., HelpAbout
+Menu, HelpMenu, Add, 关于 HostsX %applicationversion%(&A)..., HelpAbout
 	
 Menu, OptionsMenu, Add, 根据 HostsX 白名单除错时使用静默模式(&S), OptionsCheckWhitelistSilentMode
 If (CheckWhitelistSilentMode = "orzYes")
@@ -306,7 +306,7 @@ OnMessage(0x010e, "UpdateStatusBar")
 OnMessage(0x010f, "UpdateStatusBar")
 
 
-Gui, Show,, HostsX
+Gui, Show,, HostsX %applicationversion%
 Gui +LastFound
 hGui := WinExist()
 WinGet ControlID, ID
@@ -394,7 +394,7 @@ GuiControl,, MainEdit  ; Clear the Edit control.
 Unchanged=
 CurrentFileName =
 Gui +LastFound
-WinSetTitle HostsX
+WinSetTitle HostsX %applicationversion%
 LogStatus("已创建新文件。")
 return
 
@@ -425,7 +425,7 @@ GuiControlGet, MainEdit
 Unchanged=%MainEdit%
 CurrentFileName = %SelectedFileName%
 Gui +LastFound
-WinSetTitle HostsX - %CurrentFileName%
+WinSetTitle HostsX %applicationversion% - %CurrentFileName%
 LogStatus("已经打开文件 " CurrentFileName "。")
 If CheckWhitelistAfterOpen = orzYes
 {
@@ -487,7 +487,7 @@ IfInString, Attributes, S
 
 FileDelete, %temp%\HostsX%rand%.orz
 Gui +LastFound
-WinSetTitle HostsX - %CurrentFileName%
+WinSetTitle HostsX %applicationversion% - %CurrentFileName%
 LogStatus(CurrentFileName " 保存成功。")
 ErrorLevel=0
 Unchanged=%MainEdit%
