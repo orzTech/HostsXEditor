@@ -167,6 +167,7 @@ Menu, EditMenu, Add, 删除全部(&E), EditDeleteAll
 Menu, EditMenu, Add
 Menu, EditMenu, Add, 查找(&F)...`tCtrl+F, EditFind
 Menu, EditMenu, Add, 查找下一处(&N)`tF3, EditFindNext
+Menu, EditMenu, Add, 查找上一处(&N)`tShift+F3, EditFindNext
 Menu, EditMenu, Add, 替换(&R)...`tCtrl+H, EditReplace
 Menu, EditMenu, Add, 转到(&G)...`tCtrl+G, EditGoto
 Menu, EditMenu, Add
@@ -2497,15 +2498,68 @@ OnFindReplace(Event, Flags, FindText, ReplaceText){
 		StringReplace MainEdit,MainEdit,%FindText%,%ReplaceText%,UseErrorLevel
 		hitcount=%Errorlevel%
         LogStatus("替换完成，共替换 " hitcount " 处。")
-		SetTimer, RemoveToolTip, 5000
 		GuiControl,, MainEdit, %MainEdit%
 	}
 }
 
 
+
+EditFindPrev:
+if find=
+	Return
+if (find != lastFind) {
+	offset = 0
+	hits = 0
+	addToPos=0
+}
+GuiControl 1:Focus, MainEdit                           ; focus on main help window to show selection
+;SendMessage 0xB6, 0, -999, Edit1, ahk_id %ControlID%  ; Scroll to top
+GuiControlGet, MainEdit
+StringGetPos pos, MainEdit, %find% ,R,% StrLen(MainEdit)-offset+addToPos+StrLen(find)           ; find the position of the search string
+tooltip, % StrLen(MainEdit)-offset+StrLen(find)
+if ErrorLevel {
+  LogStatus("无法再次找到“" find "”。")
+  offset = 0
+  hits = 0
+	return
+}
+StringLeft __s, MainEdit, %pos%                        ; cut off end to count lines
+StringReplace __s,__s,`n,`n,UseErrorLevel             ; Errorlevel <- line number
+addToPos=%Errorlevel%
+SendMessage 0xB6, 0, ErrorLevel, Edit1, ahk_id %ControlID% ; Scroll to visible
+SendMessage 0xB1, pos + addToPos, pos + addToPos + Strlen(find), Edit1, ahk_id %ControlID% ; Select search text
+if replace
+{
+	if Found=true
+	{
+		ClipSaved := ClipboardAll   ; Save the entire clipboard to a variable of your choice.
+		Clipboard=%replace%
+		Send ^V
+		SendMessage 0xB1, pos + addToPos, pos + addToPos + Strlen(replace), Edit1, ahk_id %ControlID% ; Select search text
+		Clipboard := ClipSaved   ; Restore the original clipboard. Note the use of Clipboard (not ClipboardAll).
+	}
+}
+; http://msdn.microsoft.com/en-us/library/bb761637(VS.85).aspx
+; Scroll the caret into view in an edit control:
+SendMessage, EM_SCROLLCARET := 0xB7, 0, 0, Edit1, ahk_id %ControlID%
+offset := pos + addToPos + Strlen(find)
+lastFind = %find%
+hits--
+myhits:=addToPos - 1
+StringReplace MainEdit,MainEdit,%find%,%find%,UseErrorLevel
+hitcount=%Errorlevel%
+LogStatus(hits "/" hitcount "：在第 " myhits " 行找到“" find "”。")
+Return
+
++F3::
+GoSub EditFindPrev
+Return
+
+
 F3::
 GoSub EditFindNext
 Return
+
 
 EditFindNext:
 if find=
@@ -2522,11 +2576,9 @@ StringGetPos pos, MainEdit, %find% ,,offset-addToPos            ; find the posit
 if (pos = -1) {
 	if (offset = 0) {
 	  LogStatus("找不到“" find "”。")
-	  SetTimer, RemoveToolTip, 5000
 	}
 	else {
 	  LogStatus("无法再次找到“" find "”。")
-	  SetTimer, RemoveToolTip, 5000
 	  offset = 0
 	  hits = 0
 	}
@@ -2558,7 +2610,6 @@ myhits:=addToPos + 1
 StringReplace MainEdit,MainEdit,%find%,%find%,UseErrorLevel
 hitcount=%Errorlevel%
 LogStatus(hits "/" hitcount "：在第 " myhits " 行找到“" find "”。")
-SetTimer, RemoveToolTip, 5000
 Return
 
 RemoveToolTip:
