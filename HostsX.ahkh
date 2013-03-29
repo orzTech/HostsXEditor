@@ -2608,16 +2608,16 @@ RequestAdmin(Args)
 	if not A_IsAdmin
 	{
 		If A_IsCompiled=0
-			DllCall("shell32\ShellExecuteA", uint, 0, str, "RunAs", str, A_AhkPath , str, """" . A_ScriptFullPath . """" . Args, str, A_WorkingDir, int, 1)
+			DllCall("shell32\ShellExecuteW", uint, 0, str, "RunAs", str, A_AhkPath , str, """" . A_ScriptFullPath . """" . Args, str, A_WorkingDir, int, 1)
 		Else
-			DllCall("shell32\ShellExecuteA", uint, 0, str, "RunAs", str, A_ScriptFullPath , str, Args, str, A_WorkingDir, int, 1)
+			DllCall("shell32\ShellExecuteW", uint, 0, str, "RunAs", str, A_ScriptFullPath , str, Args, str, A_WorkingDir, int, 1)
 	}
 	else
 	{
 		If A_IsCompiled=0
-			DllCall("shell32\ShellExecuteA", uint, 0, str, "open", str, A_AhkPath , str, """" . A_ScriptFullPath . """" . Args, str, A_WorkingDir, int, 1)
+			DllCall("shell32\ShellExecuteW", uint, 0, str, "open", str, A_AhkPath , str, """" . A_ScriptFullPath . """" . Args, str, A_WorkingDir, int, 1)
 		Else
-			DllCall("shell32\ShellExecuteA", uint, 0, str, "open", str, A_ScriptFullPath , str, Args, str, A_WorkingDir, int, 1)
+			DllCall("shell32\ShellExecuteW", uint, 0, str, "open", str, A_ScriptFullPath , str, Args, str, A_WorkingDir, int, 1)
 	}
 }
 
