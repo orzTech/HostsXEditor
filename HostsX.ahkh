@@ -3,7 +3,6 @@
 #Persistent
 #SingleInstance off
 #Include inc/Dlg.ahkh
-#Include inc/HTTPRequest.ahkh
 
 
 FileEncoding, CP936
@@ -1234,173 +1233,6 @@ Gui Destroy  ; Destroy the about box.
 Gosub BuildBackupMenu
 return
 
-
-InsertOtherAction:
-action=%A_ThisMenuItem%
-Loop, %SourceIndex%
-{
-	action2:=source%A_Index%Caption
-	if (action=action2)
-	{
-		myname:=source%A_Index%Caption
-		myurl:=source%A_Index%URL
-		myaction:=source%A_Index%Action
-		if myaction=ShellExecute
-		{
-			Run, %myurl%
-		}
-		else if myaction = Insert
-		{
-			LogStatus("插入“" myname "”中, 正在下载“" myurl "”")
-			Gui, 1:+Disabled
-			EnvGet, Temp, Temp
-			Random, rand, 10000, 99999
-            HTTPRequestDownloadToFile("下载“" myname "”：", myurl, temp "\HostsX" rand ".orz")
-			If (ErrorLevel == 0)
-			{
-				FileDelete, %temp%\HostsX%rand%.orz
-				TrayTip,
-				
-				Gui, 1:-Disabled
-				Gui +OwnDialogs
-				MsgBox,16,,插入“%myname%”失败，无法连接“%myurl%”，请检查网络是否有问题并稍候重试。
-				Return
-			}
-			FileRead, mycontent, %temp%\HostsX%rand%.orz
-			FileDelete, %temp%\HostsX%rand%.orz
-			LogStatus("插入“" myname "”完成。")
-			mycontent := RegExReplace(mycontent, "\n\n", "`n")
-			mycontent := RegExReplace(mycontent, "^\n", "")
-			mycontent := RegExReplace(mycontent, "\n$", "")
-			mycontent := mycontent
-			SectionName=%myname%
-			SectionContent=%mycontent%
-			GuiControlGet, MainEdit
-			Gosub AddOrReplaceSection
-			GuiControl,, MainEdit, %MainEdit%
-			Gui, 1:-Disabled
-			GuiControl, Focus, MainEdit
-			Send ^{END}
-		}
-	}
-}
-Return
-
-InsertMenuAction:
-action=%A_ThisMenu%/%A_ThisMenuItem%
-StringMid action, action, 16
-Loop, %ArrayCount%
-{
-	action2:=ArrayName%A_Index%
-	if (action=action2)
-	{
-		myname:=ArrayFullName%A_Index%
-		mycontent:=ArrayContent%A_Index%
-	}
-}
-mycontent := RegExReplace(mycontent, "\n\n", "`n")
-mycontent := RegExReplace(mycontent, "^\n", "")
-mycontent := RegExReplace(mycontent, "\n$", "")
-mycontent := mycontent
-SectionName=%myname%
-SectionContent=%mycontent%
-GuiControlGet, MainEdit
-Gosub AddOrReplaceSection
-GuiControl,, MainEdit, %MainEdit%
-GuiControl, Focus, MainEdit
-Send ^{END}
-Return
-
-AddOrReplaceSection:
-SectionBeginLine=#B#HostsX: %SectionName%
-SectionEndLine=#E#HostsX: %SectionName%
-SectionBegin:=RegExMatch(MainEdit, "im)(*ANYCRLF)^" . SectionBeginLine . "$")
-SectionEnd:=RegExMatch(MainEdit, "im)(*ANYCRLF)^" . SectionEndLine . "$")
-SpecialHosts:=RegExMatch(SectionContent, "m)\$FUNCTION:([A-Za-z0-9]*)", SpecialHostsPart)
-If SpecialHosts
-{
-	If (SpecialHosts != 0)
-	{
-		if IsFunc("SpecialHosts" . SpecialHostsPart1)
-		{
-			SectionContent := SpecialHosts%SpecialHostsPart1%()
-		}
-	}
-}
-If (SectionBegin = 0 and SectionEnd = 0)
-{
-	if InsertHostsItemsNoAdd<>true
-		Gosub AddSection
-}
-Else
-{
-Gosub ReplaceSection
-}
-Return
-
-AddSection:
-MainEdit=%MainEdit%`n%SectionBeginLine%`n%SectionContent%`n%SectionEndLine%`n
-Return
-
-ReplaceSection:
-MainEditBefore:=SubStr(MainEdit, 1, SectionBegin - 1)
-MainEditAfter:=SubStr(MainEdit, SectionEnd + StrLen(SectionEndLine))
-MainEditNew=%SectionBeginLine%`n%SectionContent%`n%SectionEndLine%
-MainEdit=%MainEditBefore%%MainEditNew%%MainEditAfter%
-Return
-
-UrlDownloadToVar(URL, Proxy="", ProxyBypass="") {
-	AutoTrim, Off
-	hModule := DllCall("LoadLibrary", "str", "wininet.dll")
-
-	AccessType = 0
-	;INTERNET_OPEN_TYPE_PRECONFIG                    0   // use registry configuration
-	;INTERNET_OPEN_TYPE_DIRECT                       1   // direct to net
-	;INTERNET_OPEN_TYPE_PROXY                        3   // via named proxy
-	;INTERNET_OPEN_TYPE_PRECONFIG_WITH_NO_AUTOPROXY  4   // prevent using java/script/INS
-
-	io_hInternet := DllCall("wininet\InternetOpenA"
-	, "str", "" ;lpszAgent
-	, "uint", AccessType
-	, "str", Proxy
-	, "str", ProxyBypass
-	, "uint", 0) ;dwFlags
-
-	iou := DllCall("wininet\InternetOpenUrlA"
-	, "uint", io_hInternet
-	, "str", url
-	, "str", "" ;lpszHeaders
-	, "uint", 0 ;dwHeadersLength
-	, "uint", 0x80000000 ;dwFlags: INTERNET_FLAG_RELOAD = 0x80000000 // retrieve the original item
-	, "uint", 0) ;dwContext
-
-	If (ErrorLevel != 0 or iou = 0) {
-	DllCall("FreeLibrary", "uint", hModule)
-	return 0
-	}
-
-	VarSetCapacity(buffer, 512, 0)
-	VarSetCapacity(NumberOfBytesRead, 4, 0)
-	Loop
-	{
-	  irf := DllCall("wininet\InternetReadFile", "uint", iou, "uint", &buffer, "uint", 512, "uint", &NumberOfBytesRead)
-	  NOBR = 0
-	  Loop 4  ; Build the integer by adding up its bytes. - ExtractInteger
-		NOBR += *(&NumberOfBytesRead + A_Index-1) << 8*(A_Index-1)
-	  IfEqual, NOBR, 0, break
-	  ;BytesReadTotal += NOBR
-	  DllCall("lstrcpy", "str", buffer, "uint", &buffer)
-	  res = %res%%buffer%
-	}
-	StringTrimRight, res, res, 1
-
-	DllCall("wininet\InternetCloseHandle",  "uint", iou)
-	DllCall("wininet\InternetCloseHandle",  "uint", io_hInternet)
-	DllCall("FreeLibrary", "uint", hModule)
-	AutoTrim, on
-	return, res
-}
-
 HostsDelComments:
 GuiControl, Focus, MainEdit
 ClipSaved := ClipboardAll
@@ -1593,39 +1425,6 @@ GuiControlGet, MainEdit
 StringReplace MainEdit, MainEdit, 0.0.0.0, 127.0.0.1, All
 StringReplace MainEdit, MainEdit, 127.1, 127.0.0.1, All
 GuiControl,, MainEdit, %MainEdit%
-Return
-
-InsertHostsItemsAction:
-StringMid, InsertHostsItems, A_ThisMenu, 16
-Gosub InsertHostsItems
-Return
-
-InsertHostsItems:
-Gui +Disabled
-GuiControlGet, MainEdit
-Loop, %ArrayCount%
-{
-	action2:=ArrayFullName%A_Index%
-	inserthostsfound:=InStr(action2, InsertHostsItems, false, 1)
-	if inserthostsfound >=1
-	{
-		myname:=ArrayFullName%A_Index%
-		mycontent:=ArrayContent%A_Index%
-		mycontent := RegExReplace(mycontent, "`n`n", "`n")
-		mycontent := RegExReplace(mycontent, "^`n", "")
-		mycontent := RegExReplace(mycontent, "`n$", "")
-		mycontent := mycontent
-		SectionName=%myname%
-		SectionContent=%mycontent%
-		Gosub AddOrReplaceSection
-	}
-}
-GuiControl,, MainEdit, %MainEdit%
-Gui -Disabled
-GuiControl, Focus, MainEdit
-Tooltip
-Send ^{END}
-InsertHostsItemsNoAdd=
 Return
 
 HostsWrap:
@@ -2211,54 +2010,6 @@ UpdateStatusBar(wParam, lParam)
         SB_SetText("Ln " MainEditCurrentLine ", Col " MainEditCurrentCol, 1)
     }
 }
-
-HTTPRequestProgress( pct, total ) {
-If ( pct = "" )
-	Progress, OFF
-Else If ( pct < 0 )
-	Progress, % Round( 100 * ( pct + 1 ), 1 ), % Round( ( pct + 1 ) * total, 0 ) " of " total " bytes.", 正在发送数据
-Else If ( 0 <= pct )
-    Progress, % Round( 100 * ( pct ), 1 ), % Round( ( pct ) * total, 0 ) " of " total " bytes.", 正在接收数据
-}
-
-WCom(URL) {
-ComObjError(false),W := ComObjCreate("WinHttp.WinHttpRequest.5.1"),W.Open("GET", URL), W.Send()
-Return W.ResponseText,W.quit
-}
-
-
-HTTPRequestDownloadToFile(status, url, fname) {
-    global HTTPRequestStatusBarPrefix
-    HTTPRequestStatusBarPrefix := status
-    
-    ifExist, fname
-        FileDelete, fname
-
-    HTTPRequest( url, "", b, "Charset: utf-8`nBinary`nCallback: HTTPRequestStatusBarProgress`nSaveAs: " fname)
-    aErrorLevel := ErrorLevel
-    SB_SetProgress(0, 1, "+Smooth Hide")
-    ErrorLevel := aErrorLevel
-}
-
-HTTPRequestStatusBarProgress( pct, total ) {
-    global HTTPRequestStatusBarPrefix
-    If ( pct = "" )
-    {
-    	SB_SetProgress(0, 1, "+Smooth Hide")
-    }
-    Else If ( pct < 0 )
-    {
-        LogStatus(HTTPRequestStatusBarPrefix "正在发送数据：" Round( ( pct ) * total, 0 ) " / " total " 字节", False)
-    	SB_SetProgress(Round( 100 * ( pct + 1 ), 1 ), 1, "+Smooth Show")
-    }
-    Else If ( 0 <= pct )
-    {
-        LogStatus(HTTPRequestStatusBarPrefix "正在接收数据：" Round( ( pct ) * total, 0 ) " / " total " 字节", False)
-        SB_SetProgress(Round( 100 * ( pct ), 1 ), 1, "+Smooth Show")
-    }
-    return -1
-}
-
 
 ; http://www.autohotkey.com/board/topic/43335-email-validity-check-isvalidemail-function/
 isValidEmail(emailstr) 
