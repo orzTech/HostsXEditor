@@ -5,6 +5,7 @@
 #Include inc/Dlg.ahkh
 #Include inc/HTTPRequest.ahkh
 
+
 FileEncoding, CP936
 If 1=/admin
 {
@@ -125,11 +126,10 @@ If ConfigUseAppData = true
 IfNotExist,%ConfigPath%\HostsX.orzconfig
 	GoSub FirstRun
 
-FileInstall orzTech.com.png, %ConfigPath%\orzTech.com.png
 applicationname=HostsX
 applicationfunction=新一代记事本风格的 Hosts 文件编辑工具。
 applicationtip=
-applicationversion=0.7.1.18
+applicationversion=0.8.0.0
 
 LogStatus(applicationname " " applicationversion " 已经启动。")
 
@@ -191,11 +191,8 @@ Menu, FormatMenu, Add, 屏蔽转向统一使用 0.0.0.0(&0), HostsReplace0000
 Menu, FormatMenu, Add, 屏蔽转向统一使用 127.0.0.1(&1), HostsReplace127001
 Menu, FormatMenu, Add, 屏蔽转向统一使用 127.1(&2), HostsReplace1271
 
-
 GoSub BuildInsertMenu
 GoSub BuildBackupMenu
-Menu, ToolsMenu, Add, 根据 HostsX 白名单除错(&E)`tF10, CheckWhitelist
-Menu, ToolsMenu, Add
 Menu, ToolsMenu, Add, 刷新 DNS 缓存(&D)`tF7, ToolsCleanDNS
 Menu, ToolsMenu, Add, 清除 Internet Explorer 缓存(&I)`tF8, ToolsCleanIE
 Menu, ToolsMenu, Add, 清除 Windows Media Player 残余广告(&W), ToolsCleanWMP
@@ -205,52 +202,18 @@ Menu, ToolsMenu, Add, 给 Hosts 文件解锁(&U)`tF6, ToolsUnlockHosts
 Menu, ToolsMenu, Add
 Menu, ToolsMenu, Add, 执行 Ping 操作(&P)..., ToolsPing
 Menu, ToolsMenu, Add, 执行 NSLookup 操作(&N)..., ToolsNSLookup
-Gosub BuildUpdateMenu
 
-Gosub BuildADPMenu
-
-Menu, HelpMenu, Add, HostsX 帮助(&H), orzTechHelpPage
-Menu, HelpMenu, Add, HostsX 产品主页(&P), orzTechPubPage
-Menu, HelpMenu, Add, HostsX 数据发布点(&R), orzTechDataRepo
-Menu, HelpMenu, Add
-Menu, HelpMenu, Add, 发送反馈(&S)..., SendFeedback
-Menu, HelpMenu, Add
-Menu, HelpMenu, Add, 囧科技官方网站(&O), orzTech
-Menu, HelpMenu, Add, 「必须的」网络隧道加速器(&V), VPNST
+Menu, HelpMenu, Add, HostsX on GitHub(&P), orzTechPubPage
 Menu, HelpMenu, Add
 Menu, HelpMenu, Add, 关于 HostsX %applicationversion%(&A)..., HelpAbout
-	
-Menu, OptionsMenu, Add, 根据 HostsX 白名单除错时使用静默模式(&S), OptionsCheckWhitelistSilentMode
-If (CheckWhitelistSilentMode = "orzYes")
-	Menu, OptionsMenu, Check, 根据 HostsX 白名单除错时使用静默模式(&S)
 
-Menu, OptionsMenu, Add, 打开文件后自动根据 HostsX 白名单除错(&O), OptionsCheckWhitelistAfterOpen
-If (CheckWhitelistAfterOpen = "orzYes")
-	Menu, OptionsMenu, Check, 打开文件后自动根据 HostsX 白名单除错(&O)
-
-Menu, OptionsMenu, Add
-Menu, OptionsMenu, Add, 启动程序时自动更新数据文件(&S), OptionsUpdateAtStartup
-If (UpdateAtStartup = "orzYes")
-	Menu, OptionsMenu, Check, 启动程序时自动更新数据文件(&S)
-Menu, OptionsMenu, Add, 数据文件不存在时自动更新数据文件(&M), OptionsUpdateWhenMissing
-If (UpdateWhenMissing = "orzYes")
-	Menu, OptionsMenu, Check, 数据文件不存在时自动更新数据文件(&M)
-
-; Create the menu bar by attaching the sub-menus to it:
 Menu, MyMenuBar, Add, 文件(&F), :FileMenu
 Menu, MyMenuBar, Add, 编辑(&E), :EditMenu
 Menu, MyMenuBar, Add, 格式(&O), :FormatMenu
 Menu, MyMenuBar, Add, 插入(&I), :InsertMenu
-Menu, MyMenuBar, Add, HostX(&X), :InsertMenuItems
 Menu, MyMenuBar, Add, 工具(&T), :ToolsMenu
 Menu, MyMenuBar, Add, 备份(&B), :BackupMenu
-Menu, MyMenuBar, Add, 更新(&U), :UpdateMenu
-Menu, MyMenuBar, Add, 选项(&P), :OptionsMenu
-Menu, MyMenuBar, Add, ADP(&A), :ADPMenu
 Menu, MyMenuBar, Add, 帮助(&H), :HelpMenu
-Gui, 1:Menu, MyMenuBar
-
-; Attach the menu bar to the window:
 Gui, 1:Menu, MyMenuBar
 
 ; Create the main Edit control and display the window:
@@ -315,8 +278,6 @@ ControlGet, EditHandle, HWND,, Edit1, ahk_id %ControlID%
 DllCall("SendMessage", UInt, EditHandle, UInt, 0x00CB, UInt, 1, "UInt *", 100)
 CurrentFileName =  ; Indicate that there is no current file.
 Unchanged=
-_checkWhitelistAfterOpen = %CheckWhitelistAfterOpen%
-CheckWhitelistAfterOpen = orzNo
 IfExist,%SystemHosts%
 {
 	SelectedFileName =%SystemHosts%
@@ -332,53 +293,6 @@ Else
 		SelectedFileName =%SystemHosts%
 		Gosub FileRead
 	}
-}
-CheckWhitelistAfterOpen = %_checkWhitelistAfterOpen%
-
-NeedUpdate = false
-if (UpdateWhenMissing = "orzYes")
-{
-    IfNotExist,%ConfigPath%\servers.txt
-    {
-        NeedUpdate = true
-        FetchUpdateList(1)
-    }
-	IfNotExist,%ConfigPath%\hosts
-    {
-		NeedUpdate = true
-        gosub UpdateHostsFile
-    }
-	IfNotExist,%ConfigPath%\sources.txt
-    {
-		NeedUpdate = true
-        gosub UpdateOtherHosts
-    }
-	IfNotExist,%ConfigPath%\fixlist.txt
-    {
-		NeedUpdate = true
-        gosub UpdateWhitelist
-    }
-}
-If (UpdateAtStartup = "orzYes")
-	NeedUpdate = true
-
-If NeedUpdate = true
-{
-    LogStatus("本地数据库不完整，正在更新……")
-}
-Gosub ParseWhitelist
-
-Loop, %0%  ; For each parameter:
-{
-    param := %A_Index%  ; Fetch the contents of the variable whose name is contained in A_Index.
-    if param=auto
-    	Gosub AutoParam
-}
-
-If CheckWhitelistAfterOpen = orzYes
-{
-	CheckWhitelistInappMode=true
-	Gosub CheckWhitelist
 }
 
 LogStatus("就绪，单击此处可查看历史日志。")
@@ -427,11 +341,6 @@ CurrentFileName = %SelectedFileName%
 Gui +LastFound
 WinSetTitle HostsX %applicationversion% - %CurrentFileName%
 LogStatus("已经打开文件 " CurrentFileName "。")
-If CheckWhitelistAfterOpen = orzYes
-{
-	CheckWhitelistInappMode=true
-	Gosub CheckWhitelist
-}
 return
 
 ^S::
@@ -500,7 +409,6 @@ Gui +Disabled  ; Disable main window.
 Gui,99:Destroy
 Gui,99:Margin,15,15
 SetGUIFont(99)
-Gui,99:Add,Picture,xm, orzTech.com.png
 Gui,99:Font,Bold
 Gui,99:Add,Text,xm y+20,%applicationname% %applicationversion%
 Gui,99:Font
@@ -509,20 +417,11 @@ Gui,99:Add,Text,x25 y+10,%applicationfunction%
 Gui,99:Add,Text,x25 y+5,%applicationtip%
 
 Gui,99:Font,Bold
-Gui,99:Add,Text,xm y+20,by Yeechan Lu && Jock Kwok of 囧科技 | orzTech
+Gui,99:Add,Text,xm y+20,by Yeechan Lu of 囧科技 | orzTech
 Gui,99:Font
 SetGUIFont(99)
 Gui,99:Font,CBlue Underline
-Gui,99:Add,Text,x25 y+5 gorzTech,http://orztech.com/
-Gui,99:Font
-SetGUIFont(99)
-Gui,99:Font,Bold
-Gui,99:Add,Text,xm y+20,囧科技技术支持
-Gui,99:Font
-SetGUIFont(99)
-Gui,99:Font,CBlue Underline
-Gui,99:Add,Text,x25 y+5 gorzTechSupport,http://orztech.com/support
-Gui,99:Add,Text,x25 y+5 gorzTechSupportMail,support@orztech.com
+Gui,99:Add,Text,x25 y+5 gorzTechPubPage,https://github.com/orzTech/HostsXEditor
 Gui,99:Font
 SetGUIFont(99)
 Gui,99:Show,,关于 %applicationname% %applicationversion%
@@ -531,37 +430,8 @@ hCurs:=DllCall("LoadCursor","UInt",NULL,"Int",32649,"UInt") ;IDC_HAND
 
 Return
 
-orzTechHelpPage:
-  Run, http://orztech.com/softwares/hostsx/help
-Return
-
 orzTechPubPage:
-  Run, http://orztech.com/softwares/hostsx
-Return
-
-orzTechDataRepo:
-  Run, https://github.com/orzTech/HostsX
-return
-
-orzTech:
-  Run,http://orztech.com/
-Return
-
-VPNST:
-  Run, http://vpnst.com/3.html
-return
-
-orzTechSupport:
-  Run,http://orztech.com/support
-Return
-
-orzTechAcknowledgementsPage:
-  Run,http://orztech.com/softwares/hostsx/acknowledgements
-Return
-
-orzTechSupportMail:
-  Run,% "mailto:support@orztech.com?subject=HostsX%20%E5%8F%8D%E9%A6%88%E8%A1%A8%E5%8D%95%20%5B%23NULL%5D%20from%20E-mail%20Supporting"
-  ;HostsX 反馈表单 [#NULL] from E-mail Supporting
+  Run, https://github.com/orzTech/HostsXEditor
 Return
 
 WM_MOUSEMOVE(wParam,lParam)
@@ -975,310 +845,12 @@ Return
 
 BuildInsertMenu:
 Gui 1:Menu
-GoSub BuildInsertMenuItems
 Menu, InsertMenu, Add
 Menu, InsertMenu, DeleteAll
 Menu, InsertMenu, Add, 域名解析数据(&L), InsertLookupIPLocal
 Menu, InsertMenu, Add, localhost 本地解析数据(&O), InsertLocalhost
-Menu, InsertMenu, Add
-SourceIndex=0
-Loop, Read, %ConfigPath%\sources.txt
-{
-	Length := StrLen(A_LoopReadLine)
-	if Length > 0
-	{
-		fch:=SubStr(A_LoopReadLine, 1, 1)
-		if fch=-
-		{
-			Menu, InsertMenu, Add
-		}
-		else if fch=;
-		{
-			commentsource:=SubStr(A_LoopReadLine, InStr(SubStr(A_LoopReadLine, 2), "=")+2)
-			commentsourcename:=SubStr(SubStr(A_LoopReadLine, 1, InStr(A_LoopReadLine, "=")-1),2)
-			Commentsource%commentsourcename%:=commentsource
-		}
-		else
-		{
-			SourceIndex += 1
-			if InStr(A_LoopReadLine, "*")
-			{
-				StringSplit, SourceItem, A_LoopReadLine, *
-				source%SourceIndex%Caption=%SourceItem1%`tURL
-				source%SourceIndex%URL=%SourceItem2%
-				source%SourceIndex%Action=ShellExecute
-				sc:=source%SourceIndex%Caption
-				Menu, InsertMenu, Add, %sc%, InsertOtherAction
-			}
-			else
-			{
-				StringSplit, SourceItem, A_LoopReadLine, ``
-				source%SourceIndex%Caption=%SourceItem1%
-				source%SourceIndex%URL=%SourceItem2%
-				source%SourceIndex%Action=Insert
-				sc:=source%SourceIndex%Caption
-				Menu, InsertMenu, Add, %sc%, InsertOtherAction
-				if (source%SourceIndex%URL ==)
-				{
-					Menu, InsertMenu, Disable, %sc%
-				}
-			}
-		}
-	}
-}
 Gui, 1:Menu, MyMenuBar
 Return
-
-BuildInsertMenuItems:
-Menu, InsertMenuItems, Add
-Menu, InsertMenuItems, DeleteAll
-Menu, InsertMenuItems, Add, 插入本分组下所有数据(&I), InsertHostsItemsAction
-Menu, InsertMenuItems, Add
-ArrayCount=0
-Loop, Read, %ConfigPath%\hosts
-{
-	Length := StrLen(A_LoopReadLine)
-	if Length > 1
-	{
-		fch:=SubStr(A_LoopReadLine, 1, 1)
-		if fch=@
-		{
-			caption:=SubStr(A_LoopReadLine, 2)
-			fullcaption=%caption%
-			subsub:=InStr(caption, "/")
-			if subsub=0
-				capparent=Items
-			else
-			{
-				caption:=SubStr(A_LoopReadLine, InStr(SubStr(A_LoopReadLine, 2), "/")+2)
-				capparent:="Items" . SubStr(SubStr(A_LoopReadLine, 1, InStr(A_LoopReadLine, "/")-1),2)
-			}
-			Menu, InsertMenuItems%caption%, Add
-			Menu, InsertMenu%capparent%, Add, %caption%, :InsertMenuItems%caption%
-			Menu, InsertMenuItems%caption%, DeleteAll
-			Menu, InsertMenuItems%caption%, Add, 插入本分组下所有数据(&I), InsertHostsItemsAction
-			Menu, InsertMenuItems%caption%, Add
-		}
-		else if fch=#
-		{
-			ArrayCount += 1
-			caption2:=SubStr(A_LoopReadLine, 2)
-			StringReplace, captionmenu2, caption2, &, &&, All
-			ArrayName%ArrayCount%=%caption%/%caption2%
-			ArrayFullName%ArrayCount%=%fullcaption%/%caption2%
-			ArrayContent%ArrayCount%=
-			Menu, InsertMenuItems%caption%, Add, %captionmenu2%, InsertMenuAction
-		}
-		else if fch=;
-		{
-			comment:=SubStr(A_LoopReadLine, InStr(SubStr(A_LoopReadLine, 2), "=")+2)
-			commentname:=SubStr(SubStr(A_LoopReadLine, 1, InStr(A_LoopReadLine, "=")-1),2)
-			Comment%commentname%:=comment
-		}
-		else
-		{
-			ArrayContent%ArrayCount%:=ArrayContent%ArrayCount% . "`n" . A_LoopReadLine
-		}
-	}
-}
-Menu, InsertMenuItems, Add
-Menu, InsertMenuItems, Add, 版本：%Commentversion%, InsertMenuAction
-Menu, InsertMenuItems, Disable, 版本：%Commentversion%
-Menu, InsertMenuItems, Add, 作者：%Commentauthor%, InsertMenuAction
-Menu, InsertMenuItems, Disable, 作者：%Commentauthor%
-Return
-
-BuildADPMenu:
-Gui 1:Menu
-Menu, ADPMenu, Add,
-Menu, ADPMenu, DeleteAll
-AcrylicPath=
-RegRead, AcrylicPath, HKLM, SYSTEM\CurrentControlSet\services\AcrylicController, ImagePath
-if ErrorLevel
-{
-	AcrylicInstalled = false
-}
-else
-{
-	AcrylicInstalled = true
-	StringReplace AcrylicDir, AcrylicPath, AcrylicService.exe, , All
-}
-if AcrylicInstalled = true
-{
-	Menu, ADPMenu, Add, 更新 Acrylic DNS Proxy(&A), ADPUpdate
-	Menu, ADPMenu, Add
-	Menu, ADPMenu, Add, 刷新 Acrylic DNS Proxy 缓存(&R), ADPRefreshCache
-	Menu, ADPMenu, Add, 启动 Acrylic DNS Proxy 服务(&S), ADPStartService
-	Menu, ADPMenu, Add, 停止 Acrylic DNS Proxy 服务(&T), ADPStopService
-	Menu, ADPMenu, Add, 重启 Acrylic DNS Proxy 服务(&E), ADPRestartService
-	Menu, ADPMenu, Add
-	Menu, ADPMenu, Add, 编辑 Acrylic DNS Proxy 配置文件(&C), ADPEditConfig
-	Menu, ADPMenu, Add, 编辑 Acrylic DNS Proxy Hosts 文件(&T), ADPEdirHosts
-	Menu, ADPMenu, Add
-	Menu, ADPMenu, Add, 卸载 Acrylic DNS Proxy(&U), ADPUninstall
-}
-Else
-	Menu, ADPMenu, Add, 安装 Acrylic DNS Proxy(&A), ADPSetup
-
-Menu, ADPMenu, Add
-Menu, ADPMenu, Add, 这是什么？(&H), ADPWhatsThis
-Gui, 1:Menu, MyMenuBar
-return
-
-ADPUpdate:
-Gosub ADPValid
-If Errorlevel
-	Return
-_ADPUpdate=1
-
-ADPSetup:
-EnvGet, Temp, Temp
-Random, rand, 10000, 99999
-LogStatus("正在下载 Acrylic DNS Proxy……")
-HTTPRequestDownloadToFile("下载 Acrylic DNS Proxy：", "http://9bu.org/3c", temp "\HostsX" rand ".exe")
-LogStatus("下载完毕。")
-RunWait, %temp%\HostsX%rand%.exe,,UseErrorLevel
-Gosub BuildADPMenu
-If _ADPUpdate=1
-{
-	_ADPUpdate=
-}
-Else
-{
-	iF AcrylicInstalled = true
-		Gosub ADPEditConfig
-}
-
-Return
-
-ADPUninstall:
-Gosub ADPValid
-If Errorlevel
-	Return
-RunWait, %AcrylicDir%Uninstall.exe,,UseErrorLevel
-SetTimer, BuildADPMenu, -60000
-Gosub BuildADPMenu
-Return
-
-ADPWhatsThis:
-	Run,http://9bu.org/3b
-Return
-
-ADPValid:
-ErrorLevel=0
-IfExist, %AcrylicPath%
-	Return
-Else
-{
-	Gosub BuildADPMenu
-	Errorlevel = 1
-}
-Return
-
-ADPStartService:
-Gosub ADPValid
-If Errorlevel
-	Return
-	RunAdminModule("ADPStartService")
-Return
-
-AdminModuleADPStartService()
-{
-	RunWait, %comspec% /c "NET START `"Acrylic DNS Proxy Service`" & pause"
-}
-
-ADPStopService:
-Gosub ADPValid
-If Errorlevel
-	Return
-	RunAdminModule("ADPStopService")
-Return
-
-AdminModuleADPStopService()
-{
-	RunWait, %comspec% /c "NET STOP `"Acrylic DNS Proxy Service`" & pause"
-}
-
-ADPRestartService:
-Gosub ADPValid
-If Errorlevel
-	Return
-	RunAdminModule("ADPRestartService")
-Return
-
-AdminModuleADPRestartService()
-{
-	RunWait, %comspec% /c "NET STOP `"Acrylic DNS Proxy Service`" & NET START `"Acrylic DNS Proxy Service`" & pause"
-}
-
-ADPEditConfig:
-Gosub ADPValid
-If Errorlevel
-	Return
-GoSub CheckSave
-if ErrorLevel
-Return
-
-_checkWhitelistAfterOpen = %CheckWhitelistAfterOpen%
-CheckWhitelistAfterOpen = orzNo
-SelectedFileName =%AcrylicDir%AcrylicConfiguration.ini
-Gosub FileRead
-CheckWhitelistAfterOpen = %_checkWhitelistAfterOpen%
-return
-
-ADPEdirHosts:
-Gosub ADPValid
-If Errorlevel
-	Return
-GoSub CheckSave
-if ErrorLevel
-Return
-SelectedFileName =%AcrylicDir%AcrylicHosts.txt
-Gosub FileRead
-return
-
-ADPRefreshCache:
-Gosub ADPValid
-If Errorlevel
-	Return
-	RunAdminModule("ADPRefreshCache")
-Return
-
-AdminModuleADPRefreshCache()
-{
-	RegRead, AcrylicPath, HKLM, SYSTEM\CurrentControlSet\services\AcrylicController, ImagePath
-	if ErrorLevel
-	{}
-	else
-	{
-		StringReplace AcrylicDir, AcrylicPath, AcrylicService.exe, , All
-		RunWait, %comspec% /c "NET STOP `"Acrylic DNS Proxy Service`" & DEL /F `"%AcrylicDir%AcrylicCache.dat`" & IPCONFIG /FlushDNS & NET START `"Acrylic DNS Proxy Service`" & pause"
-	}
-}
-
-BuildUpdateMenu:
-Gui 1:Menu
-Menu, UpdateMenu, Add,
-Menu, UpdateMenu, DeleteAll
-If (applicationversion!=commenthostsxversion && commenthostsxversion)
-{
-    Menu, UpdateMenu, Add, 下载 HostsX 最新版本(&H)...`t%commenthostsxversion%, orzTechPubPage
-    Menu, UpdateMenu, Default, 下载 HostsX 最新版本(&H)...`t%commenthostsxversion%
-    Menu, UpdateMenu, Add
-}
-Menu, UpdateMenu, Add, 更新下列所有数据(&A), UpdateAll
-Menu, UpdateMenu, Add
-Menu, UpdateMenu, Add, HostsX 数据`t%Commentversion%, UpdateHostsFile
-Menu, UpdateMenu, Add, 推荐数据列表`t%Commentsourceversion%, UpdateOtherHosts
-Menu, UpdateMenu, Add, 白名单及除错数据`t%commentwhitelistversion%, UpdateWhitelist
-Menu, UpdateMenu, Add
-Menu, UpdateMenu, Add, 一键更新 αlpha(&O), OneKeyUpdate
-IfNotInstring, applicationversion, dev
-{
-	If (applicationversion!=commenthostsxversion && commenthostsxversion)
-		TrayTip, HostsX 检测到新版本, orzTech | 囧科技已发布新版 HostsX。`r`n`r`n最新版本：%commenthostsxversion%`r`n当前版本：%applicationversion%`r`n`r`n请在“更新”菜单中下载。,,1
-}
-Gui, 1:Menu, MyMenuBar
 
 BuildBackupMenu:
 Gui 1:Menu
@@ -1775,381 +1347,6 @@ MainEditBefore:=SubStr(MainEdit, 1, SectionBegin - 1)
 MainEditAfter:=SubStr(MainEdit, SectionEnd + StrLen(SectionEndLine))
 MainEditNew=%SectionBeginLine%`n%SectionContent%`n%SectionEndLine%
 MainEdit=%MainEditBefore%%MainEditNew%%MainEditAfter%
-Return
-
-ParseWhitelist:
-WhitelistValid = false
-IfNotExist, %ConfigPath%\fixlist.txt
-{
-	Return
-}
-WhitelistValid = true
-ArrayWhitelistCount = 0
-ArrayWhitelistFR = F
-Loop, Read, %ConfigPath%\fixlist.txt
-{
-	Length := StrLen(A_LoopReadLine)
-	if Length > 1
-	{
-		fch:=SubStr(A_LoopReadLine, 1, 1)
-		if fch=#
-		{
-			ArrayWhitelistCount += 1
-			caption2:=SubStr(A_LoopReadLine, 2)
-			StringReplace, captionmenu2, caption2, &, &&, All
-			ArrayWhiteListTitle%ArrayWhitelistCount%=%caption2%
-			ArrayWhiteListFind%ArrayWhitelistCount%=
-			ArrayWhiteListReplace%ArrayWhitelistCount%=
-			ArrayWhitelistFR = F
-		}
-		else if fch=;
-		{
-			comment:=SubStr(A_LoopReadLine, InStr(SubStr(A_LoopReadLine, 2), "=")+2)
-			commentname:=SubStr(SubStr(A_LoopReadLine, 1, InStr(A_LoopReadLine, "=")-1),2)
-			CommentWhiteList%commentname%:=comment
-		}
-		else if fch=$
-		{
-			ArrayWhitelistFR = R
-			ArrayWhiteListReplace%ArrayWhitelistCount%:=ArrayWhiteListReplace%ArrayWhitelistCount% . A_LoopReadLine . "`n"
-		}
-		else
-		{
-			If ArrayWhitelistFR = F
-			{
-				ArrayWhiteListFind%ArrayWhitelistCount%:=ArrayWhiteListFind%ArrayWhitelistCount% . A_LoopReadLine . "`n"
-			}
-			Else If ArrayWhitelistFR = R
-			{
-				ArrayWhiteListReplace%ArrayWhitelistCount%:=ArrayWhiteListReplace%ArrayWhitelistCount% . A_LoopReadLine . "`n"
-			}
-		}
-	}
-}
-Gosub BuildUpdateMenu
-;Msgbox % ArrayWhitelistCount
-;Msgbox % ArrayWhiteListTitle1
-;Msgbox % ArrayWhiteListFind1
-;Msgbox % ArrayWhiteListReplace1
-Return
-
-F10::
-CheckWhitelist:
-Gui +Disabled
-LogStatus("正开始除错……")
-Loop, %ArrayWhitelistCount%
-{
-	wTitle := ArrayWhiteListTitle%A_Index%
-	wFind := ArrayWhiteListFind%A_Index%
-	wReplace := ArrayWhiteListReplace%A_Index%
-	wResult := CheckWhiteListItem(wTitle, wFind, wReplace, CheckWhitelistSilentMode,CheckWhitelistInappMode)
-	if wResult = exit
-	{
-		LogStatus("除错工作已停止。")
-		Gui -Disabled
-		return
-	}
-}
-wResult=
-If CheckWhitelistInappMode=true
-{
-	CheckWhitelistInappMode = false
-}
-LogStatus("除错已顺利结束。")
-Tooltip
-Gui -Disabled
-Return
-
-CheckWhiteListItem(wTitle, wFind, wReplace, CheckWhitelistSilentMode,CheckWhitelistInappMode)
-{
-	wFoundItem=
-	Loop, parse, wFind, `n, `r
-	{
-		GuiControlGet, MainEdit
-		If (Asc(A_LoopField) = 0)
-		{ }
-		Else
-		{
-			wRegExp = %A_LoopField%
-			StringReplace wRegExp, wRegExp, ., \., All
-			wRegExp=m)(*ANYCRLF)^([0-9a-f:.]+)([　 	]*)([a-z0-9.	 　]*)(%wRegExp%)[　 	]*([a-z0-9.	 　]*)$
-	    	wFound:=RegExMatch(MainEdit,wRegExp)
-	    	if ErrorLevel
-	    	{}
-	    	else if wFound>0
-	    		wFoundItem=%wFoundItem%%A_LoopField%`n
-	    }
-	}
-	if wFoundItem=
-	{}
-	Else
-	{
-		wFoundItem :=RegExReplace(wFoundItem, "`n$", "")
-		if (substr(wTitle,1,1) = "!")
-		{
-			wTitle := substr(wtitle,2)
-			wDefaultCancel = true
-		}
-        LogStatus("除错已命中：" wFoundItem)
-		wPrompt = 
-(
-检测到存在问题的 Hosts 项：
-%wFoundItem%
-
-帮助信息：
-%wTitle%
-
-是否对此项进行修复？
-)
-		wPromptResult =
-		if CheckWhitelistSilentMode = orzYes
-		{
-			if wDefaultCancel = true
-				wPromptResult = No
-			Else
-				wPromptResult = Yes
-		}
-		Else
-		{
-			
-			if wDefaultCancel = true
-			{
-				if CheckWhitelistInappMode=true
-					wPromptResult = No
-				Else
-				{
-					Gui -Disabled +OwnDialogs
-					Msgbox 291,, %wPrompt%
-					Gui +Disabled
-					ifMsgBox Cancel
-						wPromptResult = Cancel
-					Else ifmsgbox yes
-						wPromptResult = Yes
-				}
-			}
-			Else
-			{
-				Gui -Disabled +OwnDialogs
-				Msgbox 35,, %wPrompt%
-				Gui +Disabled
-				ifMsgBox Cancel
-					wPromptResult = Cancel
-				Else ifmsgbox yes
-					wPromptResult = Yes
-			}
-		}
-
-		If wPromptResult = Cancel
-			return "exit"
-		Else If wPromptResult = Yes
-		{
-			w_ActionName=
-			w_ActionParam=
-			Loop, parse, wReplace, `n, `r
-			{
-				w_LoopFCH :=substr(A_LoopField,1,1)
-				if w_LoopFCH = $
-				{
-					if (w_ActionName!="")
-					{
-						if IsFunc("CheckWhitelistAction" . w_ActionName)
-						{
-							CheckWhitelistAction%w_ActionName%(wFind, wFoundItem, w_ActionParam)
-						}
-						w_ActionName=
-						w_ActionParam=
-					}
-					w_ActionName:=substr(A_LoopField,2)
-					w_ActionParam=
-				}
-				else
-				{
-					w_ActionParam=%w_ActionParam%%A_LoopField%`n
-				}
-			}
-			if IsFunc("CheckWhitelistAction" . w_ActionName)
-			{
-				CheckWhitelistAction%w_ActionName%(wFind, wFoundItem, w_ActionParam)
-			}
-		}
-	}
-	return ""
-}
-
-CheckWhitelistActionDelete(wFind, wFoundItem, w_ActionParam)
-{
-	Loop, parse, wFoundItem, `n, `r
-	{
-		GuiControlGet, MainEdit
-		If (Asc(A_LoopField) = 0)
-		{ }
-		Else
-		{
-			wRegExp = %A_LoopField%
-			StringReplace wRegExp, wRegExp, ., \., All
-			wRegExp=m)(*ANYCRLF)^([0-9a-f:.]+)([　 	]*)([a-z0-9.	 　]*)(%wRegExp%)[　 	]*([a-z0-9.	 　]*)$
-	    	wFound:=RegExMatch(MainEdit,wRegExp,wSubpart)
-	    	if ErrorLevel
-	    	{}
-	    	else if wFound>0
-	    	{
-		    	if ((wSubpart3 . wSubpart5)="")
-		    	{
-		    		MainEdit := RegExReplace(MainEdit, wRegExp, "")
-		    	}
-		    	Else
-		    	{
-		    		MainEdit := RegExReplace(MainEdit, wRegExp, wSubPart1 . wSubpart2 . wSubpart3 . " " . wSubpart5)
-		    	}
-		    	GuiControl,, MainEdit, %MainEdit%
-	    	}
-	    }
-	}
-}
-
-CheckWhitelistActionReplace(wFind, wFoundItem, w_ActionParam)
-{
-	wFirstTime = true
-	Loop, parse, wFoundItem, `n, `r
-	{
-		GuiControlGet, MainEdit
-		If (Asc(A_LoopField) = 0)
-		{ }
-		Else
-		{
-			wRegExp = %A_LoopField%
-			StringReplace wRegExp, wRegExp, ., \., All
-			wRegExp=m)(*ANYCRLF)^([0-9a-f:.]+)([　 	]*)([a-z0-9.	 　]*)(%wRegExp%)[　 	]*([a-z0-9.	 　]*)$
-	    	wFound:=RegExMatch(MainEdit,wRegExp,wSubpart)
-	    	if ErrorLevel
-	    	{}
-	    	else if wFound>0
-	    	{
-	    		if wFirstTime = true
-	    		{
-	    			StringReplace wParam, w_ActionParam, `n, %A_Space%, All
-	    			StringReplace wParam, wParam, `r, %A_Space%, All
-	    			MainEdit := RegExReplace(MainEdit, wRegExp, "$1$2$3" . RegExReplace(wParam, " $","") . "$5")
-	    			wFirstTime=false
-	    		}
-	    		else
-	    		{
-			    	if ((wSubpart3 . wSubpart5)="")
-			    	{
-			    		MainEdit := RegExReplace(MainEdit, wRegExp, "")
-			    	}
-			    	Else
-			    	{
-			    		MainEdit := RegExReplace(MainEdit, wRegExp, "$1$2$3 $5")
-			    	}
-		    	}
-		    	GuiControl,, MainEdit, %MainEdit%
-	    	}
-	    }
-	}
-}
-
-OneKeyUpdate:
-LogStatus("正开始一键更新……")
-Gui +Disabled
-GoSub UpdateHostsFile
-Gosub UpdateOtherHosts
-GoSub UpdateWhitelist
-InsertHostsItems=
-InsertHostsItemsNoAdd=true
-Gosub InsertHostsItems
-LogStatus("正进行一键更新……")
-Gui +Disabled
-Loop, %SourceIndex%
-{
-	SectionName:=source%A_Index%Caption
-	SectionBeginLine=#B#HostsX: %SectionName%
-	SectionEndLine=#E#HostsX: %SectionName%
-	SectionBegin:=RegExMatch(MainEdit, "im)(*ANYCRLF)^" . SectionBeginLine . "$")
-	SectionEnd:=RegExMatch(MainEdit, "im)(*ANYCRLF)^" . SectionEndLine . "$")
-	If (SectionBegin = 0 and SectionEnd = 0)
-	{}
-	else
-	{
-		myname:=source%A_Index%Caption
-		myurl:=source%A_Index%URL
-		LogStatus("插入“" myname "”中, 正在下载“" myurl "”")
-		Gui, 1:+Disabled
-		EnvGet, Temp, Temp
-		Random, rand, 10000, 99999
-		HTTPRequestDownloadToFile("下载“" myname "”：", myurl, temp "\HostsX" rand ".orz")
-		If (ErrorLevel == 0)
-		{
-			FileDelete, %temp%\HostsX%rand%.orz
-		}
-		else
-		{
-			FileRead, mycontent, %temp%\HostsX%rand%.orz
-			FileDelete, %temp%\HostsX%rand%.orz
-			mycontent := RegExReplace(mycontent, "\n\n", "`n")
-			mycontent := RegExReplace(mycontent, "^\n", "")
-			mycontent := RegExReplace(mycontent, "\n$", "")
-			mycontent := mycontent
-			SectionName=%myname%
-			SectionContent=%mycontent%
-			Gosub AddOrReplaceSection
-            LogStatus("插入“" myname "”完成。")
-		}
-	}
-}
-GuiControl,, MainEdit, %MainEdit%
-
-CheckWhitelistInappMode = true
-_CheckWhitelistSilentMode = %CheckWhitelistSilentMode%
-CheckWhitelistSilentMode = orzYes
-Gosub CheckWhitelist
-CheckWhitelistInappMode = false
-CheckWhitelistSilentMode = %_CheckWhitelistSilentMode%
-
-Gui -Disabled
-GuiControl, Focus, MainEdit
-Send ^{END}
-ToolTip
-LogStatus("一键更新执行成功，请检查更新结果。")
-Return
-
-UpdateWhitelist:
-FetchHostsXRepo("fixlist.txt", "HostsX 白名单及除错数据")
-If(ErrorLevel == 0)
-{
-    Gosub ParseWhitelist
-	LogStatus("HostsX 白名单及除错数据更新完成, 最新版本号：" commentwhitelistversion "。请通过“工具”菜单进行白名单检查。")
-	return
-}
-return
-
-UpdateHostsFile:
-FetchHostsXRepo("hosts", "HostsX 数据")
-If(ErrorLevel == 0)
-{
-	GoSub BuildInsertMenu
-	LogStatus("HostsX 数据更新完成, 最新版本号：" Commentversion "。请通过“插入”菜单插入最新版本数据了。")
-	Gosub BuildUpdateMenu
-	return
-}
-Return
-
-UpdateAll:
-GoSub UpdateHostsFile
-Gosub UpdateOtherHosts
-GoSub UpdateWhitelist
-Return
-
-
-UpdateOtherHosts:
-FetchHostsXRepo("sources.txt", "HostsX 推荐数据列表")
-If(ErrorLevel == 0)
-{
-	GoSub BuildInsertMenu
-	LogStatus("HostsX 推荐数据列表更新完成, 最新版本号：" Commentsourceversion "。请通过“插入”菜单插入最新版本数据了。")
-	Gosub BuildUpdateMenu
-	return
-}
 Return
 
 UrlDownloadToVar(URL, Proxy="", ProxyBypass="") {
@@ -2753,10 +1950,6 @@ IfNotExist, %setting%
 IniRead, Font, %setting%, orzTech/HostsX, Font
 IniRead, Style, %setting%, orzTech/HostsX, FontStyle
 IniRead, Color, %setting%, orzTech/HostsX, FontColor
-IniRead, UpdateAtStartup, %setting%, orzTech/HostsX, UpdateAtStartup
-IniRead, UpdateWhenMissing, %setting%, orzTech/HostsX, UpdateWhenMissing
-IniRead, CheckWhitelistSilentMode, %setting%, orzTech/HostsX, CheckWhitelistSilentMode
-IniRead, CheckWhitelistAfterOpen, %setting%, orzTech/HostsX, CheckWhitelistAfterOpen
 IniRead, FeedbackName, %setting%, orzTech/HostsX, FeedbackName
 IniRead, FeedbackEmail, %setting%, orzTech/HostsX, FeedbackEmail
 If Font=ERROR
@@ -2765,14 +1958,6 @@ If FontStyle=ERROR
 	FontStyle=s12
 If FontColor=ERROR
 	FontColor=0x000000
-If UpdateAtStartup=ERROR
-	UpdateAtStartup=orzNo
-If UpdateWhenMissing=ERROR
-	UpdateWhenMissing=orzYes
-If CheckWhitelistSilentMode=ERROR
-	CheckWhitelistSilentMode=orzNo
-If CheckWhitelistAfterOpen=ERROR
-	CheckWhitelistAfterOpen=orzNo
 If FeedbackEmail=ERROR
     FeedbackEmail=
 If FeedbackName=ERROR
@@ -2783,10 +1968,6 @@ SaveSettings:
 IniWrite, %Font%, %setting%, orzTech/HostsX, Font
 IniWrite, %Style%, %setting%, orzTech/HostsX, FontStyle
 IniWrite, %Color%, %setting%, orzTech/HostsX, FontColor
-IniWrite, %UpdateAtStartup%, %setting%, orzTech/HostsX, UpdateAtStartup
-IniWrite, %UpdateWhenMissing%, %setting%, orzTech/HostsX, UpdateWhenMissing
-IniWrite, %CheckWhitelistSilentMode%, %setting%, orzTech/HostsX, CheckWhitelistSilentMode
-IniWrite, %CheckWhitelistAfterOpen%, %setting%, orzTech/HostsX, CheckWhitelistAfterOpen
 IniWrite, %FeedbackName%, %setting%, orzTech/HostsX, FeedbackName
 IniWrite, %FeedbackEmail%, %setting%, orzTech/HostsX, FeedbackEmail
 Return
@@ -2877,13 +2058,6 @@ Loop, Parse, str, |
 return err := code
 }
 
-AutoParam:
-Gui, Hide
-Gosub, OneKeyUpdate
-Gui, Show
-Gosub, FileSave
-ExitApp
-
 PrepareEgg:
 EggText=http://pandazone.net/viewthread.php?tid=11759`t【CLANNAD】IM － Ana/軼事（中英）`n`nThe place changes and goes. Like a wind, like clouds.`t這片土地瞬息萬變 像清風 像白雲`nLike the traces of the heart, no halt at the places.`t像心之軌跡 沒有一刻停息`n`nThe place is so far away, be far apart.`t這片土地是如此遙遠 遙遠`nPeople`'s hand does not reach. so merely has (the) worship.`t人們無法觸及 因此沒有崇敬之情`n`nThe place is a lofty lord. Can`'t meet nobody put on.`t這片土地仿佛是心頭重負 無人能夠承受`nWe will lose the place. So lofty which changes.`t我們將失去這個地方 它是如此高不可攀`n`nNot all were desired. However, we`'re never sad.`t雖然不盡如人意 但我們並不憂傷`nStill, there is still the place. far away. far away.`t這片土地依舊存在 遙不可及`n`n(The wind) blows through the place. an endless, with all.`t風兒路過此地撒下萬種風情`nLike the ripple float on the water. It blows at as it goes.`t宛如水面上的波紋 多少漣漪在蕩漾`n`nThe place is no make at all. Nothing is shown.`t此地渾然天成 看不見任何事物`nLike the sand clasped by hand. It falls vainly.`t仿佛手裏緊握的沙子 轉眼便從指間滑過`n`nThe place is (a) profound lord, and wear the vain faint light.`t這片土地是如此幽深 被一道虛幻的微光所圍`nBut we will find it in the place. The heart at which it stands still.`t但我們一定要找到 那間佇立於此的小屋`n`nIf not concerned with all, It will maintain that no die.`t倘若漠不關心 它將依然沒有色彩`nTherefore there is still the heart. It`'s lonely, solitary.`t有這樣一間小屋 孤獨的立在那裏`n`nNo halt at the wind. it soars to the sky.`t順風而行 在空中飄揚`nLike the verdure (which) meets with sunrise, It grows up as reborn.`t就像綠芽沐浴在陽光中 茁壯成長`n`nThe heart has held new one. that`'s different from all.`t小屋來了新客人 有些與眾不同`nLike the sand castle of the children, but realized with the mind.`t就像孩子的沙堡 但心中可以明白`n`nThe person is a vain statue. wear taciturnity calm.`t他是一座虛無的雕像 沉沒無語`nStill, We will know a huge flow. It is stopped by nobody.`t我們知道洪潮即將來臨 無人能擋`n`nSoon, the wind wears the snow cloud. will be died to snow-white.`t很快 風披上了雪的外衣 被染成了銀白`nSummer grass will incline, No sunlight, feebly shade.`t夏草將臥躺 沒有日光 柔弱地陰涼處`n`nThe place buried in deep snow. like the collapsing castle.`t這片土地被深埋在積雪中 像那坍塌的城堡`nLike the head of the shade, figure will be thrown away.`t像那陰影的一角 形象盡不拋棄`n`nThe heart buried in deep snow. It sinks in to the flood.`t小屋被厚厚的雪覆蓋 深陷其中`nAnd the `"not dying`" is died out, and waits for a oppose one.`t全身被染上色彩 等待對手的到來`n`nEven if all are healed, be gone no return.`t縱使萬物恢復原貌 也是一去不復返`nThere is still the place. far way. far away.`t這片土地依舊存在 遙不可及`n`nThe place changes and goes. Like a wind, like clouds.`t此地瞬息萬變 像清風 像白雲`nLike the traces of the heart, no halt at the places. `t像心之軌跡 沒有一刻停息`n`nThe place is a lofty lord. can`'t meet nobody put on.`t此地仿佛是心頭重負 無人能夠承受`nStill, there is still the place. far away. far away.`t這片土地依舊存在 遙不可及…
 StringSplit, Egg, EggText, `n
@@ -2918,10 +2092,6 @@ Gosub InsertContent
 Return
 
 FirstRun:
-MsgBox, 36,, 您好，感谢您选择 orzTech | 囧科技 出品的 HostsX。`r`n`r`n这是您第一次使用本软件，您想阅读帮助文件吗？
-IfMsgBox Yes
-    Run, http://orztech.com/softwares/hostsx/help
-
 IfExist,%SystemHosts%
 {
 	FileRead, BackupContents, %SystemHosts%
@@ -2939,59 +2109,6 @@ IfExist,%SystemHosts%
 	StringReplace, BackupName, BackupName, |, _, All
 	StringReplace, BackupName, BackupName, ., _, All
 	Gosub CreateBackup
-}
-Return
-
-OptionsUpdateAtStartup:
-If (UpdateAtStartup = "orzYes")
-{
-	UpdateAtStartup = orzNo
-	Menu, OptionsMenu, Uncheck, 启动程序时自动更新数据文件(&S)
-}
-Else
-{
-	UpdateAtStartup = orzYes
-	Menu, OptionsMenu, Check, 启动程序时自动更新数据文件(&S)
-}
-Return
-
-OptionsUpdateWhenMissing:
-If (UpdateWhenMissing = "orzYes")
-{
-	UpdateWhenMissing = orzNo
-	Menu, OptionsMenu, Uncheck, 数据文件不存在时自动更新数据文件(&M)
-}
-Else
-{
-	UpdateWhenMissing = orzYes
-	Menu, OptionsMenu, Check, 数据文件不存在时自动更新数据文件(&M)
-}
-Return
-
-
-OptionsCheckWhitelistSilentMode:
-If (CheckWhitelistSilentMode = "orzYes")
-{
-	CheckWhitelistSilentMode = orzNo
-	Menu, OptionsMenu, Uncheck, 根据 HostsX 白名单除错时使用静默模式(&S)
-}
-Else
-{
-	CheckWhitelistSilentMode = orzYes
-	Menu, OptionsMenu, Check, 根据 HostsX 白名单除错时使用静默模式(&S)
-}
-Return
-
-OptionsCheckWhitelistAfterOpen:
-If (CheckWhitelistAfterOpen = "orzYes")
-{
-	CheckWhitelistAfterOpen = orzNo
-	Menu, OptionsMenu, Uncheck, 打开文件后自动根据 HostsX 白名单除错(&O)
-}
-Else
-{
-	CheckWhitelistAfterOpen = orzYes
-	Menu, OptionsMenu, Check, 打开文件后自动根据 HostsX 白名单除错(&O)
 }
 Return
 
@@ -3022,115 +2139,6 @@ SpecialHostsTHUNDERAD()
 	return result
 }
 
-
-FetchUpdateList(force = 0)
-{
-    global ConfigPath
-    
-    If(force == 1)
-        Goto fo
-        
-    IfNotExist,%ConfigPath%\servers.txt
-        Goto fo
-       
-    FileGetTime, lastUpdated, %ConfigPath%\servers.txt
-    diff := A_Now
-    EnvSub, diff, %lastUpdated%, days
-    If (diff > 1)
-        Goto fo
-        
-    return
-    
-fo:
-    LogStatus("正在获取 orzTech.com 更新点列表。")
-    updateListOrigianl:=WCom("http://api.orztech.com/hostsx/servers.txt")
-    updateList=
-    updateListCount = 0
-    Loop, parse, updateListOrigianl, `n, `r
-    {
-        If(RegExMatch(A_LoopField, "i)^https?://"))
-        updateList=%updateList%%A_LoopField%`n
-        updateListCount++
-    }
-    
-    If (updateListCount == 0)
-    {
-        updateListCount = 0
-        IfNotExist,%ConfigPath%\servers.txt
-        {
-            LogStatus("无法从任何地方获取更新点列表，已加载内置镜像列表。")
-            updateList=https://github.com/orzTech/HostsX/raw/master/`nhttps://gitcafe.com/orzTech/HostsX/raw/master/`nhttp://hostsx.rp2.jybox.net/`nhttp://hostsx.moe9th.org/repo/
-        }
-        IfExist,%ConfigPath%\servers.txt
-        {
-            FileRead, updateList2, %ConfigPath%\servers.txt
-            LogStatus("orzTech.com 更新点列表获取失败，连接已知镜像中……")
-            Loop, parse, updateList2, `n, `r
-            {
-                updateListCount = 0
-            	updateListOrigianl:=WCom(A_LoopField "" filename)
-                Loop, parse, updateListOrigianl, `n, `r
-                {
-                    If(RegExMatch(A_LoopField, "i)^https?://"))
-                    updateList=%updateList%%A_LoopField%`n
-                    updateListCount++
-                }
-                Sort, updateList, U
-                
-                If (updateListCount > 0)
-                    Goto fo2
-            }
-            Return
-        }
-    }
-    
-fo2:
-    updateListCount = 0
-    Loop, parse, updateList, `n, `r
-    {
-        updateListCount++
-    }
-    
-    IfExist,%ConfigPath%\servers.txt
-        FileDelete, %ConfigPath%\servers.txt
-    
-    FileAppend, %updateList%, %ConfigPath%\servers.txt
-    LogStatus("已获取 " updateListCount " 个更新点。")
-}
-
-FetchHostsXRepo(filename, description)
-{
-    global ConfigPath, HTTPRequestStatusBarPrefix
-    
-    FetchUpdateList()
-    FileRead, updateList, %ConfigPath%\servers.txt
-    updateListCount=0
-    Loop, parse, updateList, `n, `r
-    {
-    	updateListCount+=1
-    }
-    LogStatus("更新 " description "：准备开始，共有 " updateListCount " 个更新点。")
-    updateListIndex=0
-    Loop, parse, updateList, `n, `r  ; Specifying `n prior to `r allows both Windows and Unix files to be parsed.
-    {
-    	updateListIndex+=1
-        LogStatus("更新 " description "：正在连接 " A_LoopField "" filename "。")
-        HTTPRequestDownloadToFile("更新 " description "：", A_LoopField "" filename, ConfigPath "\" filename)
-    	If(ErrorLevel < 200 || ErrorLevel >= 400)
-    	{
-            LogStatus("更新 " description "：无法下载。将尝试下个更新点。")
-    	}
-    	Else
-    	{
-            LogStatus("更新 " description "：成功。")
-            ErrorLevel := 0
-            return
-    	}
-    }
-    LogStatus("更新 " description "：无法连接任何更新点，请检查网络是否有问题并稍候重试。")
-    ErrorLevel := 1
-    return
-}
 
 LogStatus(Message, Log2=1) {
     global StatusLog
@@ -3203,192 +2211,6 @@ UpdateStatusBar(wParam, lParam)
         SB_SetText("Ln " MainEditCurrentLine ", Col " MainEditCurrentCol, 1)
     }
 }
-FeedbackSectionsCallout(m)
-{
-    global FeedbackSections
-    FeedbackSections.Insert(m1)
-    return 1
-}
-SendFeedback()
-{
-    global FeedbackBody, FeedbackSystemInformation, FeedbackHosts, FeedbackName, FeedbackEmail, MainEdit, StatusLog, FeedbackSections
-    global applicationversion, Commentversion, commentwhitelistversion, Commentsourceversion
-    
-    ClipboardStatusLog=
-    for index, element in StatusLog
-    {
-	    ClipboardStatusLog=%ClipboardStatusLog%%element%`n
-    }    
-    
-    GuiControlGet, MainEdit
-    HostsContents:= MainEdit
-    
-    FeedbackSections := Object()
-    RegExMatch(MainEdit, "im)(*ANYCRLF)^#B#HostsX: (.*)$(?CFeedbackSectionsCallout)")
-    for index, element in FeedbackSections
-    {
-        SectionName:=element
-        SectionBeginLine=#B#HostsX: %SectionName%
-        SectionEndLine=#E#HostsX: %SectionName%
-        SectionBegin:=RegExMatch(HostsContents, "im)(*ANYCRLF)^" . SectionBeginLine . "$")
-        SectionEnd:=RegExMatch(HostsContents, "im)(*ANYCRLF)^" . SectionEndLine . "$")
-        HostsContentsBefore:=SubStr(HostsContents, 1, SectionBegin - 1)
-        HostsContentsAfter:=SubStr(HostsContents, SectionEnd + StrLen(SectionEndLine))
-        HostsContents=%HostsContentsBefore%%HostsContentsAfter%
-    }
-    
-    ClipboardFeedbackSections=
-    for index, element in FeedbackSections
-    {
-	    ClipboardFeedbackSections=%ClipboardFeedbackSections%* %element%`n
-    }
-
-    StringReplace, HostsContents, HostsContents, `r, `n, All
-    HostsContents:=RegExReplace(HostsContents, "^`n", "")
-    HostsContents:=RegExReplace(HostsContents, "`n$", "")
-    HostsContents:=RegExReplace(HostsContents, "`n+", "`n")
-    HostsContents:=RegExReplace(HostsContents, "im)(*ANYCRLF)^[^0-9a-f.:].*$", "")
-    HostsContents:=RegExReplace(HostsContents, "im)(*ANYCRLF)#.*$", "`n")
-    HostsContents:=RegExReplace(HostsContents, "im)(*ANYCRLF);.*$", "`n")
-    HostsContents:=RegExReplace(HostsContents, "`n+", "`n")
-    StringReplace, HostsContents, HostsContents, `n, `r`n, All
-    HostsContents:= RegExReplace(HostsContents, "127\.0\.0\.1", "-")
-    HostsContents:= RegExReplace(HostsContents, "0\.0\.0\.0", "+")
-    HostsContents:= RegExReplace(HostsContents, "( |\t)+", " ")
-    
-    OuterIP := RegExReplace(RegExReplace(RegExReplace(WCom("http://www.ip.cn/getip.php?action=getip&ip_url=&from=web"), "i)<[^>]*?>|&nbsp;|来自：", ""), "i).*[^0123456789](\d{1,3}\.\d{1,3}\.\d{1,3}\.)\d{1,3}", "OuterIP: $1*, IPLocation: "), "GeoIP", ", GeoIP")
-    InnerIP = InnerIP1: %A_IPAddress1%, InnerIP2: %A_IPAddress2%, InnerIP3: %A_IPAddress3%, InnerIP4: %A_IPAddress4%
-    InnerIP := RegExReplace(InnerIP, "(\d{1,3}\.\d{1,3}\.\d{1,3}\.)\d{1,3}", "$1*")
-    FeedbackBody = 
-    ( LTrim
-    问题描述
-    ========
-    （请尽量清楚的描述您遇到的问题，或者是您的建议。）
-    )
-    FeedbackBodyDeafult := FeedbackBody
-    
-    FeedbackSystemInformation=
-    ( LTrim
-    系统信息
-    ========
-    ``````
-    Now: %A_Now%, NowUTC: %A_NowUTC%
-    OSType: %A_OSType%, OSVersion: %A_OSVersion%, Is64bitOS: %A_Is64bitOS%, Language: %A_Language%
-    %OuterIP%
-    %InnerIP%
-    ``````
-    
-    日志
-    ====
-    ``````
-    %ClipboardStatusLog%
-    ``````
-    )
-    
-    FeedbackHosts=
-    ( LTrim
-    自定义的 Hosts 规则
-    =====================
-    ``````
-    %HostsContents%
-    ``````
-    
-    HostsX 数据版本
-    ===============
-    * HostsX.exe: ``%applicationversion%``
-    * hosts: ``%Commentversion%``
-    * fixlist.txt: ``%commentwhitelistversion%``
-    * sources.txt: ``%Commentsourceversion%``
-    
-    订阅的 Hosts 规则
-    =================
-    %ClipboardFeedbackSections%
-    )
-    
-    Gui,4:+owner1
-    Gui +Disabled
-    Gui,4:Destroy
-    Gui,4:Margin,15,15
-    SetGUIFont(4)
-    Gui,4:Add, Text, W312, 您的邮箱地址或者 QQ 号
-    Gui,4:Add, Text, W313 xp+327, 您的昵称
-    Gui,4:Add, Edit, vFeedbackEmail W312 xs, %FeedbackEmail%
-    Gui,4:Add, Edit, vFeedbackName W313 xp+327, %FeedbackName%
-    Gui,4:Add, Edit, WantReturn Wrap Multi vFeedbackBody W640 R15 xs
-    Gui,4:Add, Edit, WantReturn -Wrap HSCROLL Multi vFeedbackSystemInformation W312 R10
-    Gui,4:Add, Edit, WantReturn -Wrap HSCROLL Multi vFeedbackHosts W313 R10 xp+327 yp
-    Gui,4:Add, Button, W640 g4GuiButtonSend xs, 发送反馈
-    
-    Gui,4:Show,,发送反馈
-    
-    GuiControl, 4:Text, FeedbackBody, %FeedbackBody%
-    GuiControl, 4:Text, FeedbackSystemInformation, %FeedbackSystemInformation%
-    GuiControl, 4:Text, FeedbackHosts, %FeedbackHosts%
-    WinWaitClose
-    return
-    
-4GuiButtonSend:
-    GuiControlGet, FeedbackName
-    GuiControlGet, FeedbackEmail
-    GuiControlGet, FeedbackBody
-    GuiControlGet, FeedbackSystemInformation
-    GuiControlGet, FeedbackHosts
-    If (RegExReplace(FeedbackEmail, "[0-9]", "") == "" && StrLen(FeedbackEmail) >= 5)
-    {
-        FeedbackEmail:= FeedbackEmail "@qq.com"
-        GuiControl, Text, FeedbackEmail, %FeedbackEmail%
-    }
-    If (StrLen(Trim(FeedbackName)) == 0)
-    {
-        FeedbackName := FeedbackEmail
-        GuiControl, Text, FeedbackName, %FeedbackName%
-    }
-    Gosub SaveSettings
-    If (FeedbackBodyDeafult == FeedbackBody)
-    {
-        Gui +OwnDialogs
-        MsgBox, 16, , 请输入反馈内容。
-        Return
-    }
-    If (!isValidEmail(FeedbackEmail))
-    {
-        Gui +OwnDialogs
-        MsgBox, 16, , 邮箱地址无效。
-        Return
-    }
-    FeedbackContent = 
-    (LTrim
-    %FeedbackBody%
-    
-    %FeedbackSystemInformation%
-    
-    %FeedbackHosts%
-    )
-    RequestBody:= "element_1=" URLEncode(FeedbackContent) "&element_2=" URLEncode(FeedbackName) "&element_3=" URLEncode(FeedbackEmail) "&form_id=3&submit=Submit"
-    Gui 4:+Disabled
-    if (HTTPRequest( "http://api.orztech.com/forms/3", RequestBody, "", "Content-Type: application/x-www-form-urlencoded`nContent-Length: " (Strlen(RequestBody)*2) "`nCharset: utf-8`nCallback: HTTPRequestProgress"))
-    {
-        Progress, OFF
-        if (Instr(RequestBody, "top.location"))
-        {
-            Gui +OwnDialogs
-            MsgBox, 64, , 提交成功，邮件已抄送至您的邮箱。我们将尽快与您取得联系。
-            Gosub 4GuiEscape
-            return
-        }
-    }
-    Gui 4:-Disabled
-    Progress, OFF
-    Gui +OwnDialogs
-    MsgBox, 16, , 提交失败，请尝试登录 http://api.orztech.com/forms/3 手动提交。
-    Return
-    
-4GuiClose:
-4GuiEscape:
-    Gui, 1:-Disabled
-    Gui Destroy
-    return
-}
 
 HTTPRequestProgress( pct, total ) {
 If ( pct = "" )
@@ -3398,11 +2220,6 @@ Else If ( pct < 0 )
 Else If ( 0 <= pct )
     Progress, % Round( 100 * ( pct ), 1 ), % Round( ( pct ) * total, 0 ) " of " total " bytes.", 正在接收数据
 }
-
-SendFeedback:
-SendFeedback()
-return
-
 
 WCom(URL) {
 ComObjError(false),W := ComObjCreate("WinHttp.WinHttpRequest.5.1"),W.Open("GET", URL), W.Send()
