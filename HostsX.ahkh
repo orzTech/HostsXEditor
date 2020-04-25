@@ -1518,7 +1518,7 @@ Gui -Disabled
 GuiControl, Focus, MainEdit
 Send ^V
 Clipboard := ClipSaved
-LogStatus("排序玩了。")
+LogStatus("排序完了。")
 Return
 
 HostsSortCategorized:
@@ -1536,7 +1536,7 @@ Gui -Disabled
 GuiControl, Focus, MainEdit
 Send ^V
 Clipboard := ClipSaved
-LogStatus("排序玩了。")
+LogStatus("排序完了。")
 Return
 
 HostsSortSelectedCategorized:
@@ -1554,7 +1554,7 @@ GuiControl, Focus, MainEdit
 Send ^V
 Gui -Disabled
 Clipboard := ClipSaved
-LogStatus("排序玩了。")
+LogStatus("排序完了。")
 Return
 
 HostsSortCategorized(a1, a2)
