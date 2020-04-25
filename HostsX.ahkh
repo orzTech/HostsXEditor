@@ -515,7 +515,7 @@ Return
 
 FillPopularFiles:
 PopularFiles=
-DriveGet, drives, List
+drives:= SubStr(A_WinDir, 1, 1) . SubStr(A_ScriptDir, 1, 1)
 Loop, parse, drives,,
 {
 	PopularFile=%A_LoopField%:\Windows\HOSTS.SAM
@@ -733,6 +733,7 @@ Hosts =
 #	127.0.0.1       localhost
 #	::1             localhost
 )
+
 GuiControl,, MainEdit, %Hosts%
 Return
 
@@ -803,7 +804,7 @@ EditGoto:
 ControlGet, MainEditCurrentLine, CurrentLine,, edit1
 ControlGet, MainEditLineCount, LineCount,, edit1
 Gui +OwnDialogs
-InputBox, JumpToLine, 转到指定行, 行号(&L): 1 〜 %MainEditLineCount%, , , , , , , , %MainEditCurrentLine%
+InputBox, JumpToLine, 转到指定行, 行号(&L): 1～%MainEditLineCount%, , , , , , , , %MainEditCurrentLine%
 if (JumpToLine > 0 && JumpToLine <= MainEditLineCount)
 {
     JumpToLine:= JumpToLine - 1
