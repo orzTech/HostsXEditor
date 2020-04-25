@@ -1750,26 +1750,18 @@ IfNotExist, %setting%
 IniRead, Font, %setting%, orzTech/HostsX, Font
 IniRead, Style, %setting%, orzTech/HostsX, FontStyle
 IniRead, Color, %setting%, orzTech/HostsX, FontColor
-IniRead, FeedbackName, %setting%, orzTech/HostsX, FeedbackName
-IniRead, FeedbackEmail, %setting%, orzTech/HostsX, FeedbackEmail
 If Font=ERROR
 	Font=
 If FontStyle=ERROR
 	FontStyle=s12
 If FontColor=ERROR
 	FontColor=0x000000
-If FeedbackEmail=ERROR
-    FeedbackEmail=
-If FeedbackName=ERROR
-    FeedbackName=
 Return
 
 SaveSettings:
 IniWrite, %Font%, %setting%, orzTech/HostsX, Font
 IniWrite, %Style%, %setting%, orzTech/HostsX, FontStyle
 IniWrite, %Color%, %setting%, orzTech/HostsX, FontColor
-IniWrite, %FeedbackName%, %setting%, orzTech/HostsX, FeedbackName
-IniWrite, %FeedbackEmail%, %setting%, orzTech/HostsX, FeedbackEmail
 Return
 
 InsertContent:
