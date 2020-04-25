@@ -127,7 +127,7 @@ IfNotExist,%ConfigPath%\HostsX.orzconfig
 	GoSub FirstRun
 
 applicationname=HostsX
-applicationfunction=新一代记事本风格的 Hosts 文件编辑工具。
+applicationfunction=2010 年代的 Hosts 文件编辑工具。
 applicationtip=
 applicationversion=0.8.0.0
 
